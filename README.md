@@ -40,6 +40,9 @@ npm install
 1. Create a new project at [supabase.com/dashboard](https://supabase.com/dashboard)
 2. Go to **SQL Editor** and run the contents of [`supabase/schema.sql`](supabase/schema.sql)
 3. Go to **Project Settings → API** and copy your project URL and anon key
+4. Go to **Authentication → URL Configuration** and set:
+   - **Site URL**: `https://your-domain.com` (e.g. `http://localhost:3000` for local dev)
+   - **Redirect URLs**: add `https://your-domain.com/**` (the `**` wildcard is required)
 
 ### 3. Configure environment variables
 
