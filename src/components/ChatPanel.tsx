@@ -1,7 +1,114 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useRef, useEffect, useState, type FormEvent } from "react";
+import { useRef, useEffect, useState, type FormEvent, type ReactNode } from "react";
+
+/* ── Lightweight markdown renderer ──────────────────────────────────────── */
+
+function renderMarkdown(text: string): ReactNode[] {
+  const lines = text.split("\n");
+  const elements: ReactNode[] = [];
+  let listItems: ReactNode[] = [];
+  let key = 0;
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={key++} className="my-1.5 space-y-1 pl-1">
+          {listItems}
+        </ul>
+      );
+      listItems = [];
+    }
+  };
+
+  const inlineFormat = (s: string): ReactNode => {
+    // Bold **text** or __text__, then italic *text* or _text_, then inline code
+    const parts: ReactNode[] = [];
+    const regex = /(\*\*(.+?)\*\*|__(.+?)__|\*(.+?)\*|_(.+?)_|`(.+?)`)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(s)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(s.slice(lastIndex, match.index));
+      }
+      if (match[2] || match[3]) {
+        // Bold
+        parts.push(
+          <strong key={`b${match.index}`} className="font-medium text-white/90">
+            {match[2] || match[3]}
+          </strong>
+        );
+      } else if (match[4] || match[5]) {
+        // Italic
+        parts.push(
+          <em key={`i${match.index}`} className="italic text-white/60">
+            {match[4] || match[5]}
+          </em>
+        );
+      } else if (match[6]) {
+        // Code
+        parts.push(
+          <code
+            key={`c${match.index}`}
+            className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/70"
+          >
+            {match[6]}
+          </code>
+        );
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < s.length) parts.push(s.slice(lastIndex));
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Empty line
+    if (trimmed === "") {
+      flushList();
+      continue;
+    }
+
+    // Bullet: -, *, •
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.*)/);
+    if (bulletMatch) {
+      listItems.push(
+        <li key={key++} className="flex items-start gap-2">
+          <span className="mt-[7px] block h-1 w-1 shrink-0 rounded-full bg-white/25" />
+          <span>{inlineFormat(bulletMatch[1])}</span>
+        </li>
+      );
+      continue;
+    }
+
+    // Numbered list: 1. or 1)
+    const numMatch = trimmed.match(/^\d+[.)]\s+(.*)/);
+    if (numMatch) {
+      listItems.push(
+        <li key={key++} className="flex items-start gap-2">
+          <span className="mt-[7px] block h-1 w-1 shrink-0 rounded-full bg-white/25" />
+          <span>{inlineFormat(numMatch[1])}</span>
+        </li>
+      );
+      continue;
+    }
+
+    // Regular text
+    flushList();
+    elements.push(
+      <p key={key++} className="my-1">
+        {inlineFormat(trimmed)}
+      </p>
+    );
+  }
+  flushList();
+
+  return elements;
+}
 
 const PROMPTS = [
   "How is my recovery trending this week?",
@@ -127,12 +234,16 @@ export function ChatPanel({ isOpen, onClose }: Props) {
                 >
                   {m.parts?.map((part, i) =>
                     part.type === "text" ? (
-                      <p
+                      <div
                         key={i}
-                        className="whitespace-pre-wrap text-[13px] leading-relaxed font-light"
+                        className="text-[13px] leading-relaxed font-light"
                       >
-                        {part.text}
-                      </p>
+                        {m.role === "user" ? (
+                          <p className="whitespace-pre-wrap">{part.text}</p>
+                        ) : (
+                          renderMarkdown(part.text)
+                        )}
+                      </div>
                     ) : null
                   )}
                 </div>
