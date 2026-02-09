@@ -1,9 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-page px-6">
+      {/* Theme toggle */}
+      <div className="absolute right-6 top-6 z-10">
+        <ThemeToggle />
+      </div>
+
       {/* Subtle radial glow */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="h-[600px] w-[600px] rounded-full bg-glow blur-[120px]" />

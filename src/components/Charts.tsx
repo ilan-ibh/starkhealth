@@ -67,7 +67,7 @@ export function BodyChart({ data }: { data: DayData[] }) {
           <YAxis yAxisId="bf" orientation="right" {...axisProps} width={30} domain={["dataMin - 1", "dataMax + 1"]} />
           <Tooltip content={<Tip />} />
           <Area yAxisId="w" type="monotone" dataKey="weight" name="Weight (kg)" stroke="#06b6d4" fill="url(#gWt)" strokeWidth={1.5} dot={false} />
-          <Area yAxisId="bf" type="monotone" dataKey="bodyFat" name="Body Fat %" stroke="#ec4899" fill="none" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+          <Area yAxisId="bf" type="monotone" dataKey="bodyFat" name="Body Fat %" stroke="#ec4899" fill="transparent" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </Card>
