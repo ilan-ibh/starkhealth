@@ -239,7 +239,7 @@ export default function Dashboard() {
           <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0a0a0a]" />
         </div>
         <span className="text-[12px] font-light tracking-wider text-white/70">
-          Ask AI
+          Ask Stark Health
         </span>
       </button>
 
