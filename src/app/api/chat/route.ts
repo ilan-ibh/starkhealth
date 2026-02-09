@@ -1,9 +1,9 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText } from "ai";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { getDataSummaryForAI } from "@/lib/sample-data";
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages } = (await req.json()) as { messages: UIMessage[] };
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-5-20250929"),
@@ -19,7 +19,7 @@ GUIDELINES:
 - Professional, encouraging tone — like a knowledgeable coach.
 - Keep responses under 250 words unless asked for detailed analysis.
 - Use plain text, no markdown headers. Use bullet points (•) for lists.`,
-    messages,
+    messages: await convertToModelMessages(messages),
   });
 
   return result.toUIMessageStreamResponse();
