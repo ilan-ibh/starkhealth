@@ -3,35 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  sampleData,
-  getLatest,
-  getDelta,
-  getSparkline,
-  getHealthScore,
-} from "@/lib/sample-data";
+import { sampleData, getLatest, getDelta, getSparkline, getHealthScore } from "@/lib/sample-data";
 import { MetricCard } from "@/components/MetricCard";
 import { HealthScore } from "@/components/HealthScore";
 import { RecoveryChart, BodyChart, SleepChart } from "@/components/Charts";
 import { ChatPanel } from "@/components/ChatPanel";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const INSIGHTS = [
-  {
-    text: "HRV improved 22% over the past 2 weeks — cardiovascular fitness is trending up.",
-    type: "positive" as const,
-  },
-  {
-    text: "Recovery scores are 18% higher after nights with 7.5+ hours of sleep.",
-    type: "info" as const,
-  },
-  {
-    text: "Body fat decreased 1.3% this month while muscle mass increased 0.7 kg.",
-    type: "positive" as const,
-  },
-  {
-    text: "Consider reducing strain on days following poor sleep — recovery drops significantly.",
-    type: "warning" as const,
-  },
+  { text: "HRV improved 22% over the past 2 weeks — cardiovascular fitness is trending up.", type: "positive" as const },
+  { text: "Recovery scores are 18% higher after nights with 7.5+ hours of sleep.", type: "info" as const },
+  { text: "Body fat decreased 1.3% this month while muscle mass increased 0.7 kg.", type: "positive" as const },
+  { text: "Consider reducing strain on days following poor sleep — recovery drops significantly.", type: "warning" as const },
 ];
 
 function greeting() {
@@ -48,10 +31,7 @@ export default function Dashboard() {
   const score = getHealthScore();
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((d) => setHasApiKey(d.has_api_key ?? false))
-      .catch(() => setHasApiKey(false));
+    fetch("/api/settings").then((r) => r.json()).then((d) => setHasApiKey(d.has_api_key ?? false)).catch(() => setHasApiKey(false));
   }, []);
 
   const metrics = [
@@ -64,43 +44,34 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-page">
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.04] bg-black/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-edge bg-header backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-4">
-            <Link href="/">
-              <Image src="/logo.png" alt="Stark Health" width={28} height={28} />
-            </Link>
-            <div className="h-4 w-px bg-white/[0.06]" />
-            <span className="text-[11px] font-light tracking-[0.2em] text-white/35 uppercase">Dashboard</span>
+            <Link href="/"><Image src="/logo.png" alt="Stark Health" width={28} height={28} /></Link>
+            <div className="h-4 w-px bg-edge" />
+            <span className="text-[11px] font-light tracking-[0.2em] text-t4 uppercase">Dashboard</span>
           </div>
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 rounded-full border border-white/[0.06] px-3.5 py-2 text-[11px] font-light tracking-wider text-white/35 transition-all hover:border-white/15 hover:text-white/70"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M6.86 2h2.28l.36 1.77.9.37 1.61-.97 1.61 1.61-.97 1.61.37.9L15 8.86v2.28l-1.77.36-.37.9.97 1.61-1.61 1.61-1.61-.97-.9.37L8.86 15H6.86l-.36-1.77-.9-.37-1.61.97L2.38 12.22l.97-1.61-.37-.9L1 8.86V6.86l1.77-.36.37-.9-.97-1.61L3.78 2.38l1.61.97.9-.37L6.86 2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
-              <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
-            </svg>
-            Settings
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link href="/settings" className="flex items-center gap-2 rounded-full border border-edge px-3.5 py-2 text-[11px] font-light tracking-wider text-t4 transition-all hover:border-edge-h hover:text-t2">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M6.86 2h2.28l.36 1.77.9.37 1.61-.97 1.61 1.61-.97 1.61.37.9L15 8.86v2.28l-1.77.36-.37.9.97 1.61-1.61 1.61-1.61-.97-.9.37L8.86 15H6.86l-.36-1.77-.9-.37-1.61.97L2.38 12.22l.97-1.61-.37-.9L1 8.86V6.86l1.77-.36.37-.9-.97-1.61L3.78 2.38l1.61.97.9-.37L6.86 2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
+                <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
+              </svg>
+              Settings
+            </Link>
+          </div>
         </div>
       </header>
 
       {/* API Key Banner */}
       {hasApiKey === false && (
-        <div className="border-b border-amber-500/10 bg-amber-500/[0.04] px-6 py-3">
+        <div className="border-b border-amber-500/10 bg-amber-500/[0.06] px-6 py-3">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
-            <p className="text-[12px] font-light text-amber-300/70">
-              Add your Anthropic API key in Settings to enable the AI assistant.
-            </p>
-            <Link
-              href="/settings"
-              className="shrink-0 rounded-full bg-amber-500/10 px-4 py-1.5 text-[11px] font-light tracking-wider text-amber-300/80 transition-all hover:bg-amber-500/20"
-            >
-              Add Key
-            </Link>
+            <p className="text-[12px] font-light text-amber-700 dark:text-amber-300/70">Add your Anthropic API key in Settings to enable the AI assistant.</p>
+            <Link href="/settings" className="shrink-0 rounded-full bg-amber-500/10 px-4 py-1.5 text-[11px] font-light tracking-wider text-amber-700 dark:text-amber-300/80 transition-all hover:bg-amber-500/20">Add Key</Link>
           </div>
         </div>
       )}
@@ -109,18 +80,14 @@ export default function Dashboard() {
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 pb-28">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extralight tracking-wide text-white/90">{greeting()}</h1>
-            <p className="mt-1 text-sm font-light text-white/25">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-            </p>
+            <h1 className="text-2xl font-extralight tracking-wide text-t1">{greeting()}</h1>
+            <p className="mt-1 text-sm font-light text-t4">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <HealthScore score={score} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-          {metrics.map((m, i) => (
-            <MetricCard key={m.label} {...m} delay={i * 80} />
-          ))}
+          {metrics.map((m, i) => (<MetricCard key={m.label} {...m} delay={i * 80} />))}
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -130,15 +97,15 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SleepChart data={sampleData} />
-          <div className="rounded-2xl border border-white/[0.04] bg-white/[0.02] p-5">
-            <h3 className="mb-4 text-[10px] font-medium tracking-[0.2em] text-white/30 uppercase">AI Insights</h3>
+          <div className="rounded-2xl border border-edge bg-card p-5">
+            <h3 className="mb-4 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">AI Insights</h3>
             <div className="space-y-3">
               {INSIGHTS.map((ins, i) => (
-                <div key={i} className="flex items-start gap-3 rounded-xl border border-white/[0.03] bg-white/[0.01] p-3.5">
-                  <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-400/70" : ins.type === "warning" ? "text-amber-400/70" : "text-blue-400/70"}`}>
+                <div key={i} className="flex items-start gap-3 rounded-xl border border-edge bg-page p-3.5">
+                  <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
                     {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
                   </span>
-                  <p className="text-[12px] leading-relaxed font-light text-white/45">{ins.text}</p>
+                  <p className="text-[12px] leading-relaxed font-light text-t3">{ins.text}</p>
                 </div>
               ))}
             </div>
@@ -146,28 +113,26 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center justify-center gap-8 pb-8 pt-4">
-          <span className="text-[9px] font-light tracking-[0.15em] text-white/15 uppercase">Data sources</span>
-          <span className="text-[10px] font-medium tracking-[0.2em] text-white/20">WHOOP</span>
-          <span className="h-3 w-px bg-white/[0.06]" />
-          <span className="text-[10px] font-medium tracking-[0.2em] text-white/20">WITHINGS</span>
+          <span className="text-[9px] font-light tracking-[0.15em] text-tm uppercase">Data sources</span>
+          <span className="text-[10px] font-medium tracking-[0.2em] text-t4">WHOOP</span>
+          <span className="h-3 w-px bg-edge" />
+          <span className="text-[10px] font-medium tracking-[0.2em] text-t4">WITHINGS</span>
         </div>
       </div>
 
       {/* Floating AI Button */}
-      <button
-        onClick={() => setChatOpen(true)}
-        className={`fixed bottom-6 right-6 z-30 flex items-center gap-3 rounded-full border border-white/[0.08] bg-[#0a0a0a]/90 px-5 py-3.5 shadow-2xl shadow-black/50 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:shadow-white/[0.03] ${chatOpen ? "pointer-events-none scale-90 opacity-0" : "scale-100 opacity-100"}`}
-      >
+      <button onClick={() => setChatOpen(true)}
+        className={`fixed bottom-6 right-6 z-30 flex items-center gap-3 rounded-full border border-edge-s bg-page-s px-5 py-3.5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-edge-h hover:shadow-lg ${chatOpen ? "pointer-events-none scale-90 opacity-0" : "scale-100 opacity-100"}`}>
         <div className="relative">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M3 4h14v10H6l-3 3V4z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-            <circle cx="7.5" cy="9" r="0.8" fill="white" opacity="0.5" />
-            <circle cx="10" cy="9" r="0.8" fill="white" opacity="0.5" />
-            <circle cx="12.5" cy="9" r="0.8" fill="white" opacity="0.5" />
+            <path d="M3 4h14v10H6l-3 3V4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" className="text-t2" />
+            <circle cx="7.5" cy="9" r="0.8" fill="currentColor" className="text-t4" />
+            <circle cx="10" cy="9" r="0.8" fill="currentColor" className="text-t4" />
+            <circle cx="12.5" cy="9" r="0.8" fill="currentColor" className="text-t4" />
           </svg>
-          {hasApiKey && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0a0a0a]" />}
+          {hasApiKey && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-page-s" />}
         </div>
-        <span className="text-[12px] font-light tracking-wider text-white/70">Ask Stark Health</span>
+        <span className="text-[12px] font-light tracking-wider text-t2">Ask Stark Health</span>
       </button>
 
       <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} hasApiKey={hasApiKey ?? false} />

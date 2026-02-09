@@ -1,20 +1,92 @@
 @import "tailwindcss";
 
+/* ── Theme Variables ───────────────────────────────────────────────────── */
+
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
+  --page: #ffffff;
+  --page-s: #f8f8fa;
+  --card: rgba(0, 0, 0, 0.03);
+  --card-h: rgba(0, 0, 0, 0.05);
+  --btn: rgba(0, 0, 0, 0.06);
+  --btn-h: rgba(0, 0, 0, 0.10);
+  --header: rgba(255, 255, 255, 0.85);
+  --overlay: rgba(0, 0, 0, 0.4);
+  --t1: rgba(0, 0, 0, 0.88);
+  --t2: rgba(0, 0, 0, 0.60);
+  --t3: rgba(0, 0, 0, 0.42);
+  --t4: rgba(0, 0, 0, 0.28);
+  --tm: rgba(0, 0, 0, 0.16);
+  --edge: rgba(0, 0, 0, 0.08);
+  --edge-s: rgba(0, 0, 0, 0.12);
+  --edge-h: rgba(0, 0, 0, 0.20);
+  --glow: rgba(0, 0, 0, 0.02);
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --chart-text: rgba(0, 0, 0, 0.40);
+  --tooltip-bg: #ffffff;
+  --tooltip-border: rgba(0, 0, 0, 0.10);
+  --green: #16a34a;
+  --red: #dc2626;
+  --amber: #d97706;
+  --scroll-thumb: rgba(0, 0, 0, 0.12);
+  --scroll-hover: rgba(0, 0, 0, 0.22);
 }
 
+.dark {
+  --page: #000000;
+  --page-s: #0a0a0a;
+  --card: rgba(255, 255, 255, 0.04);
+  --card-h: rgba(255, 255, 255, 0.06);
+  --btn: rgba(255, 255, 255, 0.08);
+  --btn-h: rgba(255, 255, 255, 0.13);
+  --header: rgba(0, 0, 0, 0.85);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --t1: rgba(255, 255, 255, 0.92);
+  --t2: rgba(255, 255, 255, 0.68);
+  --t3: rgba(255, 255, 255, 0.48);
+  --t4: rgba(255, 255, 255, 0.33);
+  --tm: rgba(255, 255, 255, 0.20);
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-s: rgba(255, 255, 255, 0.13);
+  --edge-h: rgba(255, 255, 255, 0.20);
+  --glow: rgba(255, 255, 255, 0.02);
+  --chart-grid: rgba(255, 255, 255, 0.04);
+  --chart-text: rgba(255, 255, 255, 0.35);
+  --tooltip-bg: #111111;
+  --tooltip-border: rgba(255, 255, 255, 0.10);
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #eab308;
+  --scroll-thumb: rgba(255, 255, 255, 0.10);
+  --scroll-hover: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Tailwind Theme Tokens ─────────────────────────────────────────────── */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-page: var(--page);
+  --color-page-s: var(--page-s);
+  --color-card: var(--card);
+  --color-card-h: var(--card-h);
+  --color-btn: var(--btn);
+  --color-btn-h: var(--btn-h);
+  --color-header: var(--header);
+  --color-overlay: var(--overlay);
+  --color-t1: var(--t1);
+  --color-t2: var(--t2);
+  --color-t3: var(--t3);
+  --color-t4: var(--t4);
+  --color-tm: var(--tm);
+  --color-edge: var(--edge);
+  --color-edge-s: var(--edge-s);
+  --color-edge-h: var(--edge-h);
+  --color-glow: var(--glow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--page);
+  color: var(--t1);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
@@ -22,26 +94,16 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
+*::-webkit-scrollbar { width: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 2px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
 
-*::-webkit-scrollbar {
-  width: 4px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
+/* ── Grain overlay (dark mode only) ─────────────────────────────────────── */
 
-/* ── Grain overlay ──────────────────────────────────────────────────────── */
-
-.grain::before {
+.dark .grain::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -54,60 +116,22 @@ body {
 /* ── Animations ─────────────────────────────────────────────────────────── */
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fadeIn 1s ease-out forwards;
-}
-
-.animate-delay-200 {
-  animation-delay: 200ms;
-  opacity: 0;
-}
-.animate-delay-400 {
-  animation-delay: 400ms;
-  opacity: 0;
-}
-.animate-delay-600 {
-  animation-delay: 600ms;
-  opacity: 0;
-}
-.animate-delay-800 {
-  animation-delay: 800ms;
-  opacity: 0;
-}
+.animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+.animate-fade-in { animation: fadeIn 1s ease-out forwards; }
+.animate-delay-200 { animation-delay: 200ms; opacity: 0; }
+.animate-delay-400 { animation-delay: 400ms; opacity: 0; }
+.animate-delay-600 { animation-delay: 600ms; opacity: 0; }
+.animate-delay-800 { animation-delay: 800ms; opacity: 0; }
 
 @keyframes pulse-line {
-  0%,
-  100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
 }
-
-.animate-pulse-line {
-  animation: pulse-line 4s ease-in-out infinite;
-}
+.animate-pulse-line { animation: pulse-line 4s ease-in-out infinite; }

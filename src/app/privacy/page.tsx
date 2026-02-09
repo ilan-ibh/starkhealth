@@ -7,12 +7,12 @@ export const metadata = {
 
 export default function PrivacyPolicy() {
   return (
-    <main className="min-h-screen bg-black px-6 py-20">
+    <main className="min-h-screen bg-page px-6 py-20">
       <div className="mx-auto max-w-2xl">
         {/* Back link */}
         <Link
           href="/"
-          className="mb-16 inline-flex items-center gap-2 text-xs tracking-[0.15em] text-white/30 uppercase transition-colors hover:text-white/60"
+          className="mb-16 inline-flex items-center gap-2 text-xs tracking-[0.15em] text-t4 uppercase transition-colors hover:text-t2"
         >
           <svg
             width="16"
@@ -36,17 +36,17 @@ export default function PrivacyPolicy() {
         <h1 className="mt-12 text-3xl font-extralight tracking-[0.15em] uppercase">
           Privacy Policy
         </h1>
-        <p className="mt-4 text-sm font-light text-white/40">
+        <p className="mt-4 text-sm font-light text-t3">
           Last updated: February 2026
         </p>
 
         <div className="mt-4 h-px w-16 bg-white/10" />
 
         {/* Content */}
-        <div className="mt-16 space-y-14 text-sm leading-relaxed font-light text-white/60">
+        <div className="mt-16 space-y-14 text-sm leading-relaxed font-light text-t2">
           {/* Section 1 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               1. Introduction
             </h2>
             <p>
@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 2 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               2. Data We Access
             </h2>
             <p>
@@ -95,7 +95,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 3 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               3. How We Use Your Data
             </h2>
             <p>Your WHOOP data is used solely to:</p>
@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 4 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               4. Data Storage and Security
             </h2>
             <ul className="list-none space-y-2 pl-0">
@@ -146,7 +146,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 5 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               5. Data Sharing
             </h2>
             <p>
@@ -168,7 +168,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 6 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               6. Your Rights
             </h2>
             <p>You may:</p>
@@ -189,7 +189,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 7 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               7. Third-Party Services
             </h2>
             <p>
@@ -200,7 +200,7 @@ export default function PrivacyPolicy() {
 
           {/* Section 8 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               8. Changes to This Policy
             </h2>
             <p>
@@ -212,18 +212,18 @@ export default function PrivacyPolicy() {
 
           {/* Section 9 */}
           <section>
-            <h2 className="mb-4 text-lg font-light tracking-wider text-white/90">
+            <h2 className="mb-4 text-lg font-light tracking-wider text-t1">
               9. Contact
             </h2>
             <p>
               If you have any questions or requests regarding this Privacy Policy
               or your data, you can contact us at:
             </p>
-            <p className="mt-4 text-white/80">
+            <p className="mt-4 text-t1">
               Email:{" "}
               <a
                 href="mailto:contact@starkhealth.io"
-                className="underline underline-offset-4 transition-colors hover:text-white"
+                className="underline underline-offset-4 transition-colors hover:text-t1"
               >
                 contact@starkhealth.io
               </a>
@@ -232,12 +232,12 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* Footer */}
-        <div className="mt-20 h-px w-full bg-white/5" />
-        <footer className="mt-8 flex items-center justify-between pb-12 text-[10px] tracking-wider text-white/20">
+        <div className="mt-20 h-px w-full bg-card-h" />
+        <footer className="mt-8 flex items-center justify-between pb-12 text-[10px] tracking-wider text-tm">
           <span>&copy; {new Date().getFullYear()} Stark Health</span>
           <Link
             href="/"
-            className="transition-colors hover:text-white/50"
+            className="transition-colors hover:text-t3"
           >
             Home
           </Link>
