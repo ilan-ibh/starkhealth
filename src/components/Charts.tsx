@@ -1,6 +1,6 @@
 "use client";
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ComposedChart } from "recharts";
 import type { DayData } from "@/lib/sample-data";
 
 function fmt(d: string) { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
@@ -57,7 +57,7 @@ export function BodyChart({ data }: { data: DayData[] }) {
   return (
     <Card title="Body Composition — 30 Days">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={mapped}>
+        <ComposedChart data={mapped}>
           <defs>
             <linearGradient id="gWt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06b6d4" stopOpacity={0.12} /><stop offset="100%" stopColor="#06b6d4" stopOpacity={0} /></linearGradient>
           </defs>
@@ -67,8 +67,8 @@ export function BodyChart({ data }: { data: DayData[] }) {
           <YAxis yAxisId="bf" orientation="right" {...axisProps} width={30} domain={["dataMin - 1", "dataMax + 1"]} />
           <Tooltip content={<Tip />} />
           <Area yAxisId="w" type="monotone" dataKey="weight" name="Weight (kg)" stroke="#06b6d4" fill="url(#gWt)" strokeWidth={1.5} dot={false} />
-          <Area yAxisId="bf" type="monotone" dataKey="bodyFat" name="Body Fat %" stroke="#ec4899" fill="transparent" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-        </AreaChart>
+          <Line yAxisId="bf" type="monotone" dataKey="bodyFat" name="Body Fat %" stroke="#ec4899" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+        </ComposedChart>
       </ResponsiveContainer>
     </Card>
   );
