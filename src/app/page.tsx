@@ -36,10 +36,31 @@ export default function Home() {
         </p>
 
         {/* Coming Soon */}
-        <div className="animate-fade-in-up animate-delay-600 mt-20">
+        <div className="animate-fade-in-up animate-delay-600 mt-20 flex flex-col items-center gap-4">
           <span className="inline-block rounded-full border border-white/10 px-6 py-2.5 text-xs font-light tracking-[0.25em] text-white/40 uppercase">
             Coming Soon
           </span>
+          <Link
+            href="/dashboard"
+            className="group flex items-center gap-2 text-[11px] font-light tracking-wider text-white/20 transition-colors hover:text-white/50"
+          >
+            Preview Dashboard
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="transition-transform group-hover:translate-x-0.5"
+            >
+              <path
+                d="M6 3l5 5-5 5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
         </div>
 
         {/* Contact */}
