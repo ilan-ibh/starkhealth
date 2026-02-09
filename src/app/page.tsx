@@ -35,19 +35,16 @@ export default function Home() {
           Your health data, unified
         </p>
 
-        {/* Coming Soon */}
-        <div className="animate-fade-in-up animate-delay-600 mt-20 flex flex-col items-center gap-4">
-          <span className="inline-block rounded-full border border-white/10 px-6 py-2.5 text-xs font-light tracking-[0.25em] text-white/40 uppercase">
-            Coming Soon
-          </span>
+        {/* CTA */}
+        <div className="animate-fade-in-up animate-delay-600 mt-20 flex flex-col items-center gap-5">
           <Link
-            href="/dashboard"
-            className="group flex items-center gap-2 text-[11px] font-light tracking-wider text-white/20 transition-colors hover:text-white/50"
+            href="/login"
+            className="group inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-8 py-3 text-[12px] font-light tracking-[0.2em] text-white/80 uppercase transition-all hover:bg-white/[0.12]"
           >
-            Preview Dashboard
+            Get Started
             <svg
-              width="12"
-              height="12"
+              width="14"
+              height="14"
               viewBox="0 0 16 16"
               fill="none"
               className="transition-transform group-hover:translate-x-0.5"
@@ -60,6 +57,12 @@ export default function Home() {
                 strokeLinejoin="round"
               />
             </svg>
+          </Link>
+          <Link
+            href="/login"
+            className="text-[11px] font-light tracking-wider text-white/20 transition-colors hover:text-white/50"
+          >
+            Already have an account? Sign In
           </Link>
         </div>
 

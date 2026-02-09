@@ -122,9 +122,10 @@ const PROMPTS = [
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  hasApiKey?: boolean;
 }
 
-export function ChatPanel({ isOpen, onClose }: Props) {
+export function ChatPanel({ isOpen, onClose, hasApiKey = true }: Props) {
   const { messages, sendMessage, status } = useChat();
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
@@ -192,7 +193,25 @@ export function ChatPanel({ isOpen, onClose }: Props) {
 
         {/* Messages */}
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
-          {messages.length === 0 ? (
+          {!hasApiKey ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full border border-amber-500/20 bg-amber-500/[0.06] p-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="mt-4 text-sm font-light text-white/50">API key required</p>
+              <p className="mt-1 max-w-[260px] text-[12px] font-light text-white/25">
+                Add your Anthropic API key in Settings to start chatting with the AI assistant.
+              </p>
+              <a
+                href="/settings"
+                className="mt-5 rounded-full bg-white/[0.06] px-5 py-2 text-[11px] font-light tracking-wider text-white/60 transition-all hover:bg-white/[0.1]"
+              >
+                Go to Settings
+              </a>
+            </div>
+          ) : messages.length === 0 ? (
             <>
               <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                 <p className="text-[13px] leading-relaxed font-light text-white/50">

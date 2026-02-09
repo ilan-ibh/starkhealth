@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stark Health
+
+**Your health data, unified.** Stark Health aggregates data from WHOOP, Withings, and more into a single, elegant dashboard — powered by AI.
+
+## Features
+
+- **Unified Dashboard** — Recovery, HRV, sleep, strain, weight, and body composition in one view
+- **Stark Health Score** — Proprietary composite score from all your connected devices
+- **AI Health Assistant** — Chat with Claude about your health data, trends, and get personalized recommendations
+- **Device Integrations** — Connect WHOOP and Withings via OAuth (more coming)
+- **Privacy-First** — Bring your own API key, self-host your database, own your data
+
+## Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, TypeScript)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Auth & Database**: [Supabase](https://supabase.com/) (PostgreSQL, Row Level Security)
+- **AI**: [Anthropic Claude](https://anthropic.com/) via [Vercel AI SDK](https://sdk.vercel.ai/)
+- **Charts**: [Recharts](https://recharts.org/)
+- **Deployment**: [Vercel](https://vercel.com/)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- A [Supabase](https://supabase.com/) account (free tier works)
+- An [Anthropic](https://console.anthropic.com/) API key (each user provides their own)
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/ilan-ibh/starkhealth.git
+cd starkhealth
+npm install
+```
+
+### 2. Set up Supabase
+
+1. Create a new project at [supabase.com/dashboard](https://supabase.com/dashboard)
+2. Go to **SQL Editor** and run the contents of [`supabase/schema.sql`](supabase/schema.sql)
+3. Go to **Project Settings → API** and copy your project URL and anon key
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your Supabase credentials:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 4. Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) — sign up, add your Anthropic API key in Settings, and you're good to go.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ilan-ibh/starkhealth&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-## Learn More
+1. Click the button above or run `vercel` from the project root
+2. Add the two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+3. Deploy
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Your Supabase anonymous/public key |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> **Note**: Each user provides their own Anthropic API key through the Settings page. No server-side Anthropic key is needed.
 
-## Deploy on Vercel
+## Database Schema
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The app uses a single `profiles` table in Supabase with Row Level Security:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Column | Type | Description |
+|---|---|---|
+| `id` | uuid (PK) | References `auth.users` |
+| `anthropic_api_key` | text | User's Anthropic API key |
+| `units` | text | `'metric'` or `'imperial'` |
+| `created_at` | timestamptz | Auto-set on creation |
+| `updated_at` | timestamptz | Auto-updated on change |
+
+A database trigger automatically creates a profile row when a new user signs up.
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── chat/route.ts          # AI chat endpoint (streams Claude responses)
+│   │   └── settings/route.ts      # User profile/settings CRUD
+│   ├── auth/withings/callback/     # Withings OAuth callback
+│   ├── dashboard/page.tsx          # Main health dashboard
+│   ├── login/page.tsx              # Sign in / sign up
+│   ├── privacy/page.tsx            # Privacy policy
+│   ├── settings/page.tsx           # API key, connections, account
+│   ├── layout.tsx                  # Root layout
+│   └── page.tsx                    # Landing page
+├── components/
+│   ├── Charts.tsx                  # Recharts trend & sleep charts
+│   ├── ChatPanel.tsx               # AI chat slide-in panel
+│   ├── HealthScore.tsx             # Animated score ring
+│   └── MetricCard.tsx              # Metric card with sparkline
+├── lib/
+│   ├── sample-data.ts              # Sample WHOOP + Withings data
+│   └── supabase/
+│       ├── client.ts               # Browser Supabase client
+│       ├── middleware.ts            # Auth middleware helper
+│       └── server.ts               # Server Supabase client
+├── middleware.ts                    # Next.js route protection
+supabase/
+└── schema.sql                      # Database migration
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+## Contact
+
+Email: [contact@starkhealth.io](mailto:contact@starkhealth.io)
+Website: [starkhealth.io](https://starkhealth.io)
