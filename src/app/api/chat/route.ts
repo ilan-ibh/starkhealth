@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-5-20241022"),
+    model: anthropic("claude-sonnet-4-5-20250929"),
     system: `You are a personal health advisor for Stark Health, an integrated health data platform combining WHOOP (recovery, HRV, sleep, strain) and Withings (weight, body composition) data.
 
 ${getDataSummaryForAI()}
