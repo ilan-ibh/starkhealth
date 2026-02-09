@@ -112,26 +112,27 @@ export default function Dashboard() {
             </span>
           </div>
 
-          <button
-            onClick={() => setChatOpen(true)}
-            className="flex items-center gap-2 rounded-full border border-white/[0.08] px-4 py-2 text-[11px] font-light tracking-wider text-white/45 transition-all hover:border-white/20 hover:text-white/80"
+          <Link
+            href="/settings"
+            className="flex items-center gap-2 rounded-full border border-white/[0.06] px-3.5 py-2 text-[11px] font-light tracking-wider text-white/35 transition-all hover:border-white/15 hover:text-white/70"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path
-                d="M2 3h12v8H4l-2 2V3z"
+                d="M6.86 2h2.28l.36 1.77.9.37 1.61-.97 1.61 1.61-.97 1.61.37.9L15 8.86v2.28l-1.77.36-.37.9.97 1.61-1.61 1.61-1.61-.97-.9.37L8.86 15H6.86l-.36-1.77-.9-.37-1.61.97L2.38 12.22l.97-1.61-.37-.9L1 8.86V6.86l1.77-.36.37-.9-.97-1.61L3.78 2.38l1.61.97.9-.37L6.86 2z"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth="1.2"
                 strokeLinejoin="round"
                 fill="none"
               />
+              <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" fill="none" />
             </svg>
-            Ask AI
-          </button>
+            Settings
+          </Link>
         </div>
       </header>
 
       {/* ── Content ───────────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+      <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 pb-28">
         {/* Greeting + Health Score */}
         <div className="flex items-center justify-between">
           <div>
@@ -217,7 +218,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Chat ──────────────────────────────────────────────────────── */}
+      {/* ── Floating AI Chat Button ───────────────────────────────────── */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className={`fixed bottom-6 right-6 z-30 flex items-center gap-3 rounded-full border border-white/[0.08] bg-[#0a0a0a]/90 px-5 py-3.5 shadow-2xl shadow-black/50 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:shadow-white/[0.03] ${chatOpen ? "pointer-events-none scale-90 opacity-0" : "scale-100 opacity-100"}`}
+      >
+        <div className="relative">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M3 4h14v10H6l-3 3V4z"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <circle cx="7.5" cy="9" r="0.8" fill="white" opacity="0.5" />
+            <circle cx="10" cy="9" r="0.8" fill="white" opacity="0.5" />
+            <circle cx="12.5" cy="9" r="0.8" fill="white" opacity="0.5" />
+          </svg>
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0a0a0a]" />
+        </div>
+        <span className="text-[12px] font-light tracking-wider text-white/70">
+          Ask AI
+        </span>
+      </button>
+
+      {/* ── Chat Panel ────────────────────────────────────────────────── */}
       <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );

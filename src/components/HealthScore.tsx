@@ -17,10 +17,10 @@ export function HealthScore({ score }: { score: number }) {
     score >= 80 ? "#22c55e" : score >= 60 ? "#eab308" : "#ef4444";
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
+    <div className="flex items-center gap-5">
+      {/* Ring */}
+      <div className="relative shrink-0">
         <svg width="128" height="128" className="-rotate-90">
-          {/* Track */}
           <circle
             cx="64"
             cy="64"
@@ -29,7 +29,6 @@ export function HealthScore({ score }: { score: number }) {
             stroke="rgba(255,255,255,0.04)"
             strokeWidth="5"
           />
-          {/* Progress */}
           <circle
             cx="64"
             cy="64"
@@ -49,9 +48,16 @@ export function HealthScore({ score }: { score: number }) {
           </span>
         </div>
       </div>
-      <p className="mt-1 text-[9px] font-medium tracking-[0.25em] text-white/25 uppercase">
-        Health Score
-      </p>
+
+      {/* Label */}
+      <div className="flex flex-col">
+        <p className="text-[10px] font-medium tracking-[0.2em] text-white/30 uppercase">
+          Stark Health Score
+        </p>
+        <p className="mt-1 max-w-[180px] text-[11px] leading-relaxed font-light text-white/20">
+          Custom score based on your unified WHOOP &amp; Withings data
+        </p>
+      </div>
     </div>
   );
 }
