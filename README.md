@@ -25,6 +25,31 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 - **Privacy-First** — Bring your own API keys, self-host your database, own your data. No mock data in production — only real provider data shown
 - **Data Caching** — Health data cached in Supabase with 4-hour TTL for fast loads
 
+### Screenshots
+
+#### Dashboard — Dark Mode
+![Dashboard Dark](docs/screenshots/dashboard-dark.png)
+
+#### Dashboard — Light Mode
+![Dashboard Light](docs/screenshots/dashboard-light.png)
+
+#### Muscle Fatigue Map & Training Analytics
+![Training](docs/screenshots/training.png)
+
+#### AI Health Coach (Ask Stark Health)
+![AI Chat](docs/screenshots/ai-chat.png)
+
+#### Expandable Metric Detail (7d / 14d / 30d)
+![Metric Detail](docs/screenshots/metric-detail.png)
+
+#### MCP Integration with Open Claw
+![MCP](docs/screenshots/mcp-settings.png)
+
+#### Settings — Connected Providers
+![Settings](docs/screenshots/settings.png)
+
+---
+
 ### Supported Integrations
 
 | Provider | Auth Method | Data |
