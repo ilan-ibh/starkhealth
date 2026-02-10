@@ -186,6 +186,7 @@ export default function Dashboard() {
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [days, setDays] = useState<DayData[]>([]);
   const [workouts, setWorkouts] = useState<RawWorkout[]>([]);
+  const [providers, setProviders] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -198,6 +199,7 @@ export default function Dashboard() {
       if (health) {
         setDays(health.days || []);
         setWorkouts(health.workouts || []);
+        setProviders(health.providers || {});
       }
       setLoading(false);
     });
@@ -362,8 +364,17 @@ export default function Dashboard() {
           </>
         ) : (
           <div className="rounded-2xl border border-edge bg-card p-8 text-center">
-            <p className="text-sm font-light text-t3">Connect Hevy in Settings to see your workout data</p>
-            <p className="mt-1 text-[11px] text-tm">No workouts found yet</p>
+            {providers.hevy ? (
+              <>
+                <p className="text-sm font-light text-t2">Hevy connected</p>
+                <p className="mt-1 text-[11px] text-tm">No workouts recorded yet — log your first workout in Hevy to see data here</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-light text-t3">Connect Hevy in Settings to see your workout data</p>
+                <Link href="/settings" className="mt-3 inline-block rounded-full bg-btn px-5 py-2 text-[11px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h">Go to Settings</Link>
+              </>
+            )}
           </div>
         )}
 
