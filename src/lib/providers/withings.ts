@@ -28,7 +28,7 @@ async function refreshTokenIfNeeded(
   const data = await res.json();
 
   if (data.status !== 0 || !data.body?.access_token) {
-    console.error("Withings token refresh failed:", data);
+    console.error("Withings token refresh failed");
     return token.access_token;
   }
 

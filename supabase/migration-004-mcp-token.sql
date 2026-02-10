@@ -4,3 +4,4 @@
 -- ============================================================================
 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS mcp_token text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS oauth_state text;

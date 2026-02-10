@@ -25,7 +25,7 @@ async function refreshTokenIfNeeded(
   });
 
   if (!res.ok) {
-    console.error("WHOOP token refresh failed:", await res.text());
+    console.error("WHOOP token refresh failed");
     return token.access_token;
   }
 

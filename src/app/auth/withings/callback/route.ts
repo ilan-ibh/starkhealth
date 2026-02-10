@@ -14,9 +14,16 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || user.id !== state) {
+  if (!user) {
     return NextResponse.redirect(`${baseUrl}/settings?error=withings_auth_failed`);
   }
+
+  // Validate OAuth state nonce
+  const { data: profile } = await supabase.from("profiles").select("oauth_state").eq("id", user.id).single();
+  if (!profile || profile.oauth_state !== state) {
+    return NextResponse.redirect(`${baseUrl}/settings?error=withings_csrf_failed`);
+  }
+  await supabase.from("profiles").update({ oauth_state: null }).eq("id", user.id);
 
   const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/withings/callback`;
 
@@ -37,7 +44,7 @@ export async function GET(request: NextRequest) {
   const data = await tokenRes.json();
 
   if (data.status !== 0 || !data.body?.access_token) {
-    console.error("Withings token exchange failed:", data);
+    console.error("Withings token exchange failed");
     return NextResponse.redirect(`${baseUrl}/settings?error=withings_token_failed`);
   }
 

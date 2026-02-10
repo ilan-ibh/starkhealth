@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 export async function GET() {
   const supabase = await createClient();
@@ -11,7 +12,10 @@ export async function GET() {
 
   const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/whoop/callback`;
   const scopes = "read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement offline";
-  const state = user.id;
+
+  // Generate random nonce and store in profile for CSRF protection
+  const state = randomUUID();
+  await supabase.from("profiles").update({ oauth_state: state }).eq("id", user.id);
 
   const authUrl = `https://api.prod.whoop.com/oauth/oauth2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
 
