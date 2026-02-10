@@ -25,7 +25,7 @@ export function HealthScore({ score }: { score: number }) {
       </div>
       <div className="flex flex-col">
         <p className="text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Stark Health Score</p>
-        <p className="mt-1 max-w-[180px] text-[11px] leading-relaxed font-light text-tm">Custom score based on your unified WHOOP &amp; Withings data</p>
+        <p className="mt-1 max-w-[180px] text-[11px] leading-relaxed font-light text-tm">Custom score based on your unified WHOOP, Withings &amp; Hevy data</p>
       </div>
     </div>
   );
