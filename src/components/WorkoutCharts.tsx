@@ -77,12 +77,7 @@ export function FrequencyChart({ data }: { data: { week: string; count: number }
 
 // ── Strength Progression Chart ───────────────────────────────────────────
 
-const LIFT_COLORS: Record<string, string> = {
-  "Bench Press": "#3b82f6",
-  "Squat": "#22c55e",
-  "Deadlift": "#ef4444",
-  "Overhead Press": "#eab308",
-};
+const DYNAMIC_COLORS = ["#3b82f6", "#22c55e", "#ef4444", "#eab308", "#a855f7", "#06b6d4", "#ec4899", "#f97316"];
 
 export function StrengthChart({ data }: { data: { exercise: string; data: { date: string; weight: number }[] }[] }) {
   // Merge all dates into one dataset
@@ -108,15 +103,15 @@ export function StrengthChart({ data }: { data: { exercise: string; data: { date
             <XAxis dataKey="date" {...axisProps} interval={Math.max(0, Math.floor(merged.length / 6))} />
             <YAxis {...axisProps} width={35} unit="kg" />
             <Tooltip content={<Tip />} />
-            {data.map((lift) => (
+            {data.map((lift, i) => (
               <Line
                 key={lift.exercise}
                 type="monotone"
                 dataKey={lift.exercise}
                 name={lift.exercise}
-                stroke={LIFT_COLORS[lift.exercise] || "#888"}
+                stroke={DYNAMIC_COLORS[i % DYNAMIC_COLORS.length]}
                 strokeWidth={2}
-                dot={{ r: 3, fill: LIFT_COLORS[lift.exercise] || "#888" }}
+                dot={{ r: 3, fill: DYNAMIC_COLORS[i % DYNAMIC_COLORS.length] }}
                 connectNulls
               />
             ))}
@@ -125,9 +120,9 @@ export function StrengthChart({ data }: { data: { exercise: string; data: { date
       </div>
       {/* Legend */}
       <div className="mt-3 flex flex-wrap gap-3">
-        {data.map((lift) => (
+        {data.map((lift, i) => (
           <div key={lift.exercise} className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ background: LIFT_COLORS[lift.exercise] }} />
+            <span className="h-2 w-2 rounded-full" style={{ background: DYNAMIC_COLORS[i % DYNAMIC_COLORS.length] }} />
             <span className="text-[10px] text-t4">{lift.exercise}</span>
           </div>
         ))}

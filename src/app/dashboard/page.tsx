@@ -91,19 +91,26 @@ function computeFrequency(workouts: RawWorkout[]) {
 }
 
 function computeStrength(workouts: RawWorkout[]) {
-  const lifts = ["Bench Press", "Squat", "Deadlift", "Overhead Press"];
-  return lifts.map((name) => {
-    const data: { date: string; weight: number }[] = [];
-    for (const w of workouts) {
-      for (const ex of w.exercises) {
-        if (ex.name === name) {
-          const top = ex.sets.filter((s) => s.type === "normal").reduce((b, s) => s.weight_kg > b ? s.weight_kg : b, 0);
-          if (top > 0) data.push({ date: new Date(w.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), weight: top });
-        }
+  // Find the top exercises by frequency and weight — not a hardcoded list
+  const exerciseData: Record<string, { date: string; weight: number }[]> = {};
+  const exerciseMaxWeight: Record<string, number> = {};
+
+  for (const w of workouts) {
+    for (const ex of w.exercises) {
+      const top = ex.sets.filter((s) => s.type === "normal").reduce((b, s) => s.weight_kg > b ? s.weight_kg : b, 0);
+      if (top > 0) {
+        if (!exerciseData[ex.name]) exerciseData[ex.name] = [];
+        exerciseData[ex.name].push({ date: new Date(w.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), weight: top });
+        exerciseMaxWeight[ex.name] = Math.max(exerciseMaxWeight[ex.name] || 0, top);
       }
     }
-    return { exercise: name, data };
-  });
+  }
+
+  // Return top 4 exercises by max weight lifted
+  return Object.entries(exerciseData)
+    .sort((a, b) => (exerciseMaxWeight[b[0]] || 0) - (exerciseMaxWeight[a[0]] || 0))
+    .slice(0, 4)
+    .map(([exercise, data]) => ({ exercise, data }));
 }
 
 function computePRs(workouts: RawWorkout[]) {
