@@ -75,6 +75,8 @@ npm install
    - [`supabase/schema.sql`](supabase/schema.sql) — Core tables (profiles, triggers)
    - [`supabase/migration-002-providers.sql`](supabase/migration-002-providers.sql) — OAuth token storage
    - [`supabase/migration-003-cache.sql`](supabase/migration-003-cache.sql) — Health data cache
+   - [`supabase/migration-004-mcp-token.sql`](supabase/migration-004-mcp-token.sql) — MCP token column
+   - [`supabase/migration-005-mcp-verify.sql`](supabase/migration-005-mcp-verify.sql) — MCP RPC functions
 3. Go to **Project Settings > API** and copy your project URL and anon key
 4. Go to **Authentication > URL Configuration** and set:
    - **Site URL**: Your deployment URL (e.g., `http://localhost:3000` for local dev)
