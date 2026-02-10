@@ -37,7 +37,7 @@ export default function Home() {
             alt="WHOOP"
             width={120}
             height={34}
-            className="logo-adaptive h-[22px] w-auto object-contain opacity-30"
+            className="logo-adaptive h-[26px] w-auto object-contain opacity-30"
           />
           <Image
             src="/logos/withings.png"
