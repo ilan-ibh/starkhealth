@@ -1,7 +1,8 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { z } from "zod";
 import { createServerClient } from "@supabase/ssr";
-import { buildHealthContext, getSystemPrompt } from "@/lib/health-context";
+import { buildHealthContextMcp } from "@/lib/health-context-mcp";
+import { getSystemPrompt } from "@/lib/health-context";
 import { fetchWhoopData } from "@/lib/providers/whoop";
 import { fetchWithingsData } from "@/lib/providers/withings";
 import { fetchHevyData } from "@/lib/providers/hevy";
@@ -16,15 +17,12 @@ function getSupabase() {
   );
 }
 
-// Look up user by mcp_token from the Authorization header
+// Look up user by mcp_token via RPC (bypasses RLS since MCP has no auth session)
 async function getUserByToken(token: string) {
   const supabase = getSupabase();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, anthropic_api_key, ai_model")
-    .eq("mcp_token", token)
-    .single();
-  if (!profile) return null;
+  const { data, error } = await supabase.rpc("verify_mcp_token", { token });
+  if (error || !data || data.length === 0) return null;
+  const profile = data[0];
   return { supabase, userId: profile.id as string, apiKey: profile.anthropic_api_key as string | null, aiModel: profile.ai_model as string };
 }
 
@@ -49,10 +47,7 @@ const mcpHandler = createMcpHandler(
         }
         const { supabase, userId } = _authCache;
 
-        const { data: tokens } = await supabase
-          .from("provider_tokens")
-          .select("provider, access_token, refresh_token, expires_at")
-          .eq("user_id", userId);
+        const { data: tokens } = await supabase.rpc("get_provider_tokens", { p_user_id: userId });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tokenMap = Object.fromEntries((tokens || []).map((t: any) => [t.provider, t]));
@@ -72,7 +67,7 @@ const mcpHandler = createMcpHandler(
           await supabase.from("workout_cache").upsert(wRows, { onConflict: "user_id,workout_id" });
         }
 
-        const context = await buildHealthContext(supabase, userId);
+        const context = await buildHealthContextMcp(supabase, userId);
         return { content: [{ type: "text" as const, text: context }] };
       }
     );
@@ -98,7 +93,7 @@ const mcpHandler = createMcpHandler(
           return { content: [{ type: "text" as const, text: "No Anthropic API key configured. Add one in Stark Health Settings." }] };
         }
 
-        const healthContext = await buildHealthContext(supabase, userId);
+        const healthContext = await buildHealthContextMcp(supabase, userId);
         const systemPrompt = getSystemPrompt(healthContext);
         const modelId = ["claude-sonnet-4-5-20250929", "claude-opus-4-6"].includes(aiModel) ? aiModel : "claude-sonnet-4-5-20250929";
         const anthropic = createAnthropic({ apiKey });
