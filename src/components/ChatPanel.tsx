@@ -102,7 +102,7 @@ export function ChatPanel({ isOpen, onClose, hasApiKey = true }: Props) {
             <>
               <div className="rounded-xl border border-edge bg-card p-4">
                 <p className="text-[13px] leading-relaxed font-light text-t3">
-                  Hi — I&apos;m your health assistant. I have access to your WHOOP and Withings data. Ask me anything about your metrics, trends, or for personalized recommendations.
+                  Hi — I&apos;m your health coach. I have access to your WHOOP, Withings, and Hevy data. Ask me about recovery, sleep, training, body composition, or for personalized recommendations.
                 </p>
               </div>
               <p className="pt-2 text-[9px] font-medium tracking-[0.2em] text-tm uppercase">Suggestions</p>

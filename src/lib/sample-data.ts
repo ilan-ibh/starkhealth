@@ -142,44 +142,4 @@ export function getHealthScore(trainingScore?: number): number {
   return Math.round(rec + slp + hrvN + body + train);
 }
 
-// ── AI summary ───────────────────────────────────────────────────────────────
-
-export function getDataSummaryForAI(): string {
-  const t = getLatest();
-  const f = sampleData[0];
-  const a7 = (k: keyof Omit<DayData, "date">) => getAverage(7, k);
-
-  return `
-HEALTH DATA SUMMARY (${f.date} → ${t.date}, 30 days)
-
-TODAY (${t.date}):
-• Recovery ${t.recovery}% | HRV ${t.hrv} ms | RHR ${t.rhr} bpm
-• Sleep ${t.sleepHours}h (score ${t.sleepScore}%) — Deep ${t.deepSleep}h, REM ${t.remSleep}h, Light ${t.lightSleep}h
-• Strain ${t.strain} | Calories ${t.calories}
-• Weight ${t.weight} kg | Body Fat ${t.bodyFat}% | Muscle ${t.muscleMass} kg
-• Steps ${t.steps}
-
-7-DAY AVERAGES:
-• Recovery ${a7("recovery")}% | HRV ${a7("hrv")} ms | Sleep ${a7("sleepHours")}h
-• Strain ${a7("strain")} | Steps ${a7("steps")}
-• Weight ${a7("weight")} kg | Body Fat ${a7("bodyFat")}%
-
-30-DAY DELTA:
-• Recovery ${f.recovery}% → ${t.recovery}% (${t.recovery - f.recovery > 0 ? "+" : ""}${t.recovery - f.recovery}%)
-• HRV ${f.hrv} → ${t.hrv} ms (${t.hrv - f.hrv > 0 ? "+" : ""}${t.hrv - f.hrv} ms)
-• Weight ${f.weight} → ${t.weight} kg (${r1(t.weight - f.weight)} kg)
-• Body Fat ${f.bodyFat} → ${t.bodyFat}% (${r1(t.bodyFat - f.bodyFat)}%)
-• Muscle ${f.muscleMass} → ${t.muscleMass} kg (+${r1(t.muscleMass - f.muscleMass)} kg)
-
-FULL DAILY DATA (JSON):
-${JSON.stringify(sampleData)}
-
-WORKOUT DATA (from Hevy):
-The user trains 4-5x per week (Push/Pull/Legs/Upper split).
-Key lifts: Bench Press ~82kg, Squat ~104kg, Deadlift ~126kg, OHP ~52kg.
-All lifts show progressive overload over 30 days.
-Total volume: ~150,000+ kg lifted this month.
-Training consistency is good — average 4.5 sessions/week.
-Recent muscle fatigue: chest and quads are most fatigued (trained yesterday), back is recovering, legs were last trained 2 days ago.
-`.trim();
-}
+// Note: AI context is now built dynamically from cached data in src/lib/health-context.ts
