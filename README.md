@@ -1,33 +1,63 @@
 # Stark Health
 
-**Your health data, unified.** Stark Health aggregates data from WHOOP, Withings, and more into a single, elegant dashboard — powered by AI.
+**Health intelligence, unified.** Aggregate data from WHOOP, Withings, Hevy, and more into a single elegant dashboard with an AI-powered longevity coach.
 
-## Features
+---
 
-- **Unified Dashboard** — Recovery, HRV, sleep, strain, weight, and body composition in one view
-- **Stark Health Score** — Proprietary composite score from all your connected devices
-- **AI Health Assistant** — Chat with Claude about your health data, trends, and get personalized recommendations
-- **Device Integrations** — Connect WHOOP and Withings via OAuth (more coming)
-- **Privacy-First** — Bring your own API key, self-host your database, own your data
+## What is Stark Health?
+
+Stark Health is an open-source health data platform that connects your wearables and fitness apps into one unified view. Instead of switching between WHOOP for recovery, Withings for body composition, and Hevy for workouts, you get a single dashboard that cross-references all your data and surfaces insights no single app can provide.
+
+An AI assistant (powered by Claude) acts as your personal longevity and performance coach — analyzing your real data, spotting correlations between sleep and training output, and giving you specific, actionable recommendations.
+
+### Key Features
+
+- **Unified Dashboard** — Recovery, HRV, sleep, strain, weight, body composition, and workout data in one view
+- **Stark Health Score** — Proprietary composite score (0-100) combining recovery, sleep, HRV, body composition, and training consistency
+- **AI Health Coach** — Chat with Claude about your data. Gets specific: "Your HRV dropped 40% after yesterday's leg session — consider a recovery day"
+- **Expandable Metric Cards** — Click any metric to see 7/14/30-day trends with min, avg, max stats
+- **Muscle Fatigue Map** — Visual body heat map showing training load per muscle group
+- **Strength Progression** — Track key lifts (bench, squat, deadlift, OHP) over time
+- **Light/Dark Theme** — Full theme system with toggle, persisted to localStorage
+- **Privacy-First** — Bring your own API keys, self-host your database, own your data
+- **Data Caching** — Health data cached in Supabase with 4-hour TTL for fast loads
+
+### Supported Integrations
+
+| Provider | Auth Method | Data |
+|---|---|---|
+| **WHOOP** | OAuth 2.0 | Recovery, HRV, resting heart rate, sleep stages, strain, calories |
+| **Withings** | OAuth 2.0 | Weight, body fat %, muscle mass, steps |
+| **Hevy** | API Key | Workouts, exercises, sets, reps, weight, PRs |
+
+---
 
 ## Tech Stack
 
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, TypeScript)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Auth & Database**: [Supabase](https://supabase.com/) (PostgreSQL, Row Level Security)
-- **AI**: [Anthropic Claude](https://anthropic.com/) via [Vercel AI SDK](https://sdk.vercel.ai/)
-- **Charts**: [Recharts](https://recharts.org/)
-- **Deployment**: [Vercel](https://vercel.com/)
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org/) (App Router, TypeScript) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
+| Auth & Database | [Supabase](https://supabase.com/) (PostgreSQL, Row Level Security) |
+| AI | [Anthropic Claude](https://anthropic.com/) via [Vercel AI SDK](https://sdk.vercel.ai/) |
+| Charts | [Recharts](https://recharts.org/) |
+| Deployment | [Vercel](https://vercel.com/) |
 
-## Getting Started
+---
+
+## Self-Hosting Guide
+
+This guide walks you through deploying your own instance of Stark Health. You'll need accounts with Supabase and (optionally) WHOOP and Withings developer portals.
 
 ### Prerequisites
 
 - Node.js 20+
 - A [Supabase](https://supabase.com/) account (free tier works)
-- An [Anthropic](https://console.anthropic.com/) API key (each user provides their own)
+- (Optional) A [WHOOP developer](https://developer.whoop.com/) account for WHOOP integration
+- (Optional) A [Withings developer](https://developer.withings.com/) account for Withings integration
+- Each user provides their own [Anthropic](https://console.anthropic.com/) API key and [Hevy](https://hevy.com/settings?developer) API key through the Settings page
 
-### 1. Clone the repo
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/ilan-ibh/starkhealth.git
@@ -38,40 +68,75 @@ npm install
 ### 2. Set up Supabase
 
 1. Create a new project at [supabase.com/dashboard](https://supabase.com/dashboard)
-2. Go to **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/migration-002-providers.sql`](supabase/migration-002-providers.sql)
-3. Go to **Project Settings → API** and copy your project URL and anon key
-4. Go to **Authentication → URL Configuration** and set:
-   - **Site URL**: `https://your-domain.com` (e.g. `http://localhost:3000` for local dev)
-   - **Redirect URLs**: add `https://your-domain.com/**` (the `**` wildcard is required)
+2. Go to **SQL Editor** and run the following migrations in order:
+   - [`supabase/schema.sql`](supabase/schema.sql) — Core tables (profiles, triggers)
+   - [`supabase/migration-002-providers.sql`](supabase/migration-002-providers.sql) — OAuth token storage
+   - [`supabase/migration-003-cache.sql`](supabase/migration-003-cache.sql) — Health data cache
+3. Go to **Project Settings > API** and copy your project URL and anon key
+4. Go to **Authentication > URL Configuration** and set:
+   - **Site URL**: Your deployment URL (e.g., `http://localhost:3000` for local dev)
+   - **Redirect URLs**: Add `http://localhost:3000/**` (and your production URL if deploying)
 
-### 3. Configure environment variables
+### 3. Set up WHOOP (optional)
+
+1. Register an app at [developer.whoop.com](https://developer.whoop.com)
+2. Set the redirect URL to `https://your-domain.com/whoop/callback`
+3. Note your Client ID and Client Secret
+4. Your app works immediately for up to 10 test users (no approval needed)
+
+### 4. Set up Withings (optional)
+
+1. Register an app at [developer.withings.com](https://developer.withings.com)
+2. Set the callback URL to `https://your-domain.com/auth/withings/callback`
+3. Note your Client ID and Client Secret
+4. In development mode, only the account that created the app can authorize
+
+### 5. Configure environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local` with your Supabase credentials:
+Edit `.env.local`:
 
-```
+```env
+# Required — Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Optional — WHOOP OAuth (omit to disable WHOOP integration)
+WHOOP_CLIENT_ID=your-whoop-client-id
+WHOOP_CLIENT_SECRET=your-whoop-client-secret
+
+# Optional — Withings OAuth (omit to disable Withings integration)
+WITHINGS_CLIENT_ID=your-withings-client-id
+WITHINGS_CLIENT_SECRET=your-withings-client-secret
 ```
 
-### 4. Run the dev server
+> **Note:** Anthropic API keys and Hevy API keys are provided by each user through the Settings page. No server-side keys are needed for those.
+
+### 6. Run locally
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — sign up, add your Anthropic API key in Settings, and you're good to go.
+Open [http://localhost:3000](http://localhost:3000). Sign up, connect your providers in Settings, add your Anthropic API key, and you're good to go.
+
+---
 
 ## Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ilan-ibh/starkhealth&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ilan-ibh/starkhealth&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SITE_URL)
 
 1. Click the button above or run `vercel` from the project root
-2. Add the two environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-3. Deploy
+2. Add all environment variables (see table below)
+3. Set `NEXT_PUBLIC_SITE_URL` to your Vercel deployment URL
+4. Update your Supabase **Site URL** and **Redirect URLs** to match
+5. Update your WHOOP/Withings redirect URLs to match
+
+---
 
 ## Environment Variables
 
@@ -79,27 +144,60 @@ Open [http://localhost:3000](http://localhost:3000) — sign up, add your Anthro
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Your Supabase anonymous/public key |
-| `NEXT_PUBLIC_SITE_URL` | Yes | Your deployment URL (e.g. `https://starkhealth.io`) |
-| `WHOOP_CLIENT_ID` | For WHOOP | Register at [developer.whoop.com](https://developer.whoop.com) |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Your deployment URL (e.g., `https://yourdomain.com`) |
+| `WHOOP_CLIENT_ID` | For WHOOP | WHOOP OAuth client ID ([developer.whoop.com](https://developer.whoop.com)) |
 | `WHOOP_CLIENT_SECRET` | For WHOOP | WHOOP OAuth client secret |
-| `WITHINGS_CLIENT_ID` | For Withings | Register at [developer.withings.com](https://developer.withings.com) |
+| `WITHINGS_CLIENT_ID` | For Withings | Withings OAuth client ID ([developer.withings.com](https://developer.withings.com)) |
 | `WITHINGS_CLIENT_SECRET` | For Withings | Withings OAuth client secret |
 
-> **Note**: Each user provides their own Anthropic API key and Hevy API key through the Settings page. No server-side keys are needed for those.
+---
 
 ## Database Schema
 
-The app uses a single `profiles` table in Supabase with Row Level Security:
+Four tables with Row Level Security — users can only access their own data.
+
+### `profiles`
+Created automatically when a user signs up.
 
 | Column | Type | Description |
 |---|---|---|
 | `id` | uuid (PK) | References `auth.users` |
 | `anthropic_api_key` | text | User's Anthropic API key |
-| `units` | text | `'metric'` or `'imperial'` |
-| `created_at` | timestamptz | Auto-set on creation |
-| `updated_at` | timestamptz | Auto-updated on change |
+| `ai_model` | text | Selected AI model (`claude-sonnet-4-5-20250929` or `claude-opus-4-6`) |
+| `units` | text | `metric` or `imperial` |
 
-A database trigger automatically creates a profile row when a new user signs up.
+### `provider_tokens`
+Stores OAuth tokens and API keys per provider per user.
+
+| Column | Type | Description |
+|---|---|---|
+| `user_id` | uuid (FK) | References `auth.users` |
+| `provider` | text | `whoop`, `withings`, or `hevy` |
+| `access_token` | text | OAuth access token or API key |
+| `refresh_token` | text | OAuth refresh token (null for Hevy) |
+| `expires_at` | timestamptz | Token expiry (auto-refreshed) |
+
+### `health_cache`
+Caches daily health metrics (4-hour TTL).
+
+| Column | Type | Description |
+|---|---|---|
+| `user_id` | uuid | References `auth.users` |
+| `date` | date | Day of the data |
+| `data` | jsonb | All metrics for that day |
+| `synced_at` | timestamptz | Last sync time |
+
+### `workout_cache`
+Caches Hevy workout data.
+
+| Column | Type | Description |
+|---|---|---|
+| `user_id` | uuid | References `auth.users` |
+| `workout_id` | text | Hevy workout ID |
+| `data` | jsonb | Full workout object |
+| `synced_at` | timestamptz | Last sync time |
+
+---
 
 ## Project Structure
 
@@ -107,30 +205,87 @@ A database trigger automatically creates a profile row when a new user signs up.
 src/
 ├── app/
 │   ├── api/
-│   │   ├── chat/route.ts          # AI chat endpoint (streams Claude responses)
-│   │   └── settings/route.ts      # User profile/settings CRUD
-│   ├── auth/withings/callback/     # Withings OAuth callback
-│   ├── dashboard/page.tsx          # Main health dashboard
-│   ├── login/page.tsx              # Sign in / sign up
-│   ├── privacy/page.tsx            # Privacy policy
-│   ├── settings/page.tsx           # API key, connections, account
-│   ├── layout.tsx                  # Root layout
-│   └── page.tsx                    # Landing page
+│   │   ├── chat/route.ts             # AI chat (streams Claude responses from cached data)
+│   │   ├── health-data/route.ts      # Unified data endpoint (cache + provider fetch)
+│   │   ├── settings/route.ts         # User profile CRUD
+│   │   ├── whoop/auth/route.ts       # WHOOP OAuth initiation
+│   │   ├── whoop/callback/route.ts   # WHOOP OAuth callback
+│   │   └── withings/auth/route.ts    # Withings OAuth initiation
+│   ├── auth/withings/callback/        # Withings OAuth callback
+│   ├── whoop/callback/                # WHOOP OAuth callback (matches registered URL)
+│   ├── dashboard/page.tsx             # Main health dashboard
+│   ├── login/page.tsx                 # Sign in / sign up
+│   ├── privacy/page.tsx               # Privacy policy
+│   ├── settings/page.tsx              # API keys, connections, AI model, account
+│   ├── globals.css                    # Theme system (CSS variables, light/dark)
+│   ├── layout.tsx                     # Root layout with theme init
+│   └── page.tsx                       # Landing page
 ├── components/
-│   ├── Charts.tsx                  # Recharts trend & sleep charts
-│   ├── ChatPanel.tsx               # AI chat slide-in panel
-│   ├── HealthScore.tsx             # Animated score ring
-│   └── MetricCard.tsx              # Metric card with sparkline
+│   ├── Charts.tsx                     # Recovery, body composition, sleep charts
+│   ├── ChatPanel.tsx                  # AI chat slide-in panel with markdown rendering
+│   ├── HealthScore.tsx                # Animated Stark Health Score ring
+│   ├── MetricCard.tsx                 # Clickable metric card with sparkline
+│   ├── MetricDetail.tsx               # Expanded metric view (7d/14d/30d chart + stats)
+│   ├── MuscleMap.tsx                  # Muscle fatigue body heat map
+│   ├── ThemeToggle.tsx                # Light/dark mode toggle
+│   └── WorkoutCharts.tsx              # Volume, frequency, strength, PRs charts
 ├── lib/
-│   ├── sample-data.ts              # Sample WHOOP + Withings data
-│   └── supabase/
-│       ├── client.ts               # Browser Supabase client
-│       ├── middleware.ts            # Auth middleware helper
-│       └── server.ts               # Server Supabase client
-├── middleware.ts                    # Next.js route protection
+│   ├── providers/
+│   │   ├── whoop.ts                   # WHOOP API client (fetch + token refresh)
+│   │   ├── withings.ts                # Withings API client (fetch + token refresh)
+│   │   └── hevy.ts                    # Hevy API client
+│   ├── supabase/
+│   │   ├── client.ts                  # Browser Supabase client
+│   │   ├── middleware.ts              # Auth middleware helper
+│   │   └── server.ts                  # Server Supabase client
+│   ├── hevy-data.ts                   # Hevy mock data + analytics functions
+│   └── sample-data.ts                 # WHOOP/Withings mock data + types
+└── middleware.ts                       # Route protection (/dashboard, /settings)
+
 supabase/
-└── schema.sql                      # Database migration
+├── schema.sql                          # Core schema (profiles + triggers)
+├── migration-002-providers.sql         # Provider token storage
+└── migration-003-cache.sql             # Health data cache tables
 ```
+
+---
+
+## How It Works
+
+### Data Flow
+
+1. User connects WHOOP/Withings via OAuth or adds Hevy API key in Settings
+2. Tokens stored securely in Supabase `provider_tokens` table (RLS enforced)
+3. Dashboard loads `/api/health-data` which checks the cache first (4-hour TTL)
+4. If cache is stale, fetches fresh data from all connected providers in parallel
+5. Data merged into unified daily format, cached to Supabase, returned to dashboard
+6. AI chat reads from the same cache — no redundant API calls
+
+### Stark Health Score
+
+A composite score (0-100) weighted across five dimensions:
+
+| Factor | Weight | Source |
+|---|---|---|
+| Recovery | 25% | WHOOP recovery score |
+| Sleep | 20% | WHOOP sleep performance |
+| HRV | 20% | WHOOP heart rate variability |
+| Body Composition | 15% | Withings body fat trend |
+| Training Consistency | 20% | Hevy workout frequency + progressive overload |
+
+### AI Coach
+
+The AI assistant uses a detailed system prompt designed to act as a longevity and performance coach (not a generic chatbot). It:
+
+- References your actual numbers and dates
+- Cross-correlates sleep, recovery, training, and body composition
+- Gives specific, actionable recommendations with timing and dosing
+- Thinks longitudinally (trends over weeks, not just today)
+- Supports Claude Sonnet 4.5 (fast) and Claude Opus 4.6 (deep analysis)
+
+Each user provides their own Anthropic API key — your data and API usage stay private.
+
+---
 
 ## Contributing
 
@@ -140,11 +295,16 @@ supabase/
 4. Push to the branch (`git push origin feature/my-feature`)
 5. Open a Pull Request
 
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
 
-## Contact
+---
 
-Email: [contact@starkhealth.io](mailto:contact@starkhealth.io)
-Website: [starkhealth.io](https://starkhealth.io)
+## Links
+
+- **Website**: [starkhealth.io](https://starkhealth.io)
+- **Email**: [contact@starkhealth.io](mailto:contact@starkhealth.io)
+- **GitHub**: [github.com/ilan-ibh/starkhealth](https://github.com/ilan-ibh/starkhealth)
