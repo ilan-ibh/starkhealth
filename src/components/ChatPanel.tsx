@@ -79,8 +79,7 @@ export function ChatPanel({ isOpen, onClose, hasApiKey = true }: Props) {
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-edge px-5 py-4">
           <div>
-            <h2 className="text-sm font-light tracking-wider text-t1">Health Assistant</h2>
-            <p className="text-[10px] text-t4">Powered by Claude</p>
+            <h2 className="text-sm font-light tracking-wider text-t1">Stark Health</h2>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-t4 transition-colors hover:bg-btn hover:text-t2">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
