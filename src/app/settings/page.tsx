@@ -28,6 +28,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [units, setUnits] = useState("metric");
+  const [mcpToken, setMcpToken] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -50,6 +51,7 @@ export default function Settings() {
         setHasKey(data.has_api_key);
         if (data.ai_model) setAiModel(data.ai_model);
         if (data.units) setUnits(data.units);
+        if (data.mcp_token) setMcpToken(data.mcp_token);
       }
 
       // Load provider connection status
@@ -85,6 +87,17 @@ export default function Settings() {
     const res = await fetch("/api/account", { method: "DELETE" });
     if (res.ok) { router.push("/"); router.refresh(); }
     else { setDeleting(false); setDeleteConfirm(false); }
+  };
+
+  const generateMcpToken = async () => {
+    const token = crypto.randomUUID() + "-" + crypto.randomUUID();
+    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mcp_token: token }) });
+    setMcpToken(token);
+  };
+
+  const revokeMcpToken = async () => {
+    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mcp_token: null }) });
+    setMcpToken(null);
   };
 
   const toggleUnits = async (newUnits: string) => {
@@ -201,6 +214,60 @@ export default function Settings() {
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* MCP Integration */}
+        <section className="mt-14">
+          <h2 className="text-[10px] font-medium tracking-[0.25em] text-t4 uppercase">MCP Integration</h2>
+          <p className="mt-2 text-sm font-light text-t3">Connect external AI agents (like Open Claw) to your Stark Health data via the Model Context Protocol.</p>
+          <div className="mt-6 rounded-2xl border border-edge bg-card p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-light tracking-wider text-t1">API Token</h3>
+                <p className="mt-0.5 text-[11px] font-light text-t4">Used to authenticate MCP tool calls from external agents</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full ${mcpToken ? "bg-emerald-500" : "bg-tm"}`} />
+                <span className={`text-[11px] font-light ${mcpToken ? "text-emerald-600 dark:text-emerald-400" : "text-t4"}`}>{mcpToken ? "Active" : "Not set"}</span>
+              </div>
+            </div>
+
+            {mcpToken && (
+              <div className="mt-4 space-y-3">
+                <div className="rounded-lg bg-page px-3 py-2">
+                  <p className="break-all font-mono text-[11px] text-t3">{mcpToken}</p>
+                </div>
+                <div className="rounded-lg bg-page px-3 py-2">
+                  <p className="text-[10px] font-medium text-t4 uppercase tracking-wider mb-1">MCP Client Config</p>
+                  <pre className="font-mono text-[10px] text-t3 whitespace-pre-wrap">{`{
+  "stark-health": {
+    "url": "${typeof window !== "undefined" ? window.location.origin : "https://starkhealth.io"}/api/mcp",
+    "headers": {
+      "Authorization": "Bearer ${mcpToken}"
+    }
+  }
+}`}</pre>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-3">
+              {!mcpToken ? (
+                <button onClick={generateMcpToken} className="rounded-xl bg-btn px-5 py-2.5 text-[12px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h">
+                  Generate Token
+                </button>
+              ) : (
+                <>
+                  <button onClick={generateMcpToken} className="rounded-xl bg-btn px-5 py-2.5 text-[12px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h">
+                    Regenerate
+                  </button>
+                  <button onClick={revokeMcpToken} className="rounded-xl border border-edge px-5 py-2.5 text-[12px] font-light tracking-wider text-t4 transition-all hover:border-red-500/30 hover:text-red-500">
+                    Revoke
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </section>

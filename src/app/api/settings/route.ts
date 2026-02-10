@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("anthropic_api_key, ai_model, units")
+    .select("anthropic_api_key, ai_model, units, mcp_token")
     .eq("id", user.id)
     .single();
 
@@ -32,6 +32,7 @@ export async function GET() {
     has_api_key: !!data.anthropic_api_key,
     ai_model: data.ai_model || "claude-sonnet-4-5-20250929",
     units: data.units,
+    mcp_token: data.mcp_token || null,
   });
 }
 
@@ -46,7 +47,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json();
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | null> = {};
 
   if (body.anthropic_api_key !== undefined) {
     updates.anthropic_api_key = body.anthropic_api_key;
@@ -56,6 +57,9 @@ export async function PUT(req: Request) {
   }
   if (body.units !== undefined) {
     updates.units = body.units;
+  }
+  if (body.mcp_token !== undefined) {
+    updates.mcp_token = body.mcp_token;
   }
 
   const { error } = await supabase

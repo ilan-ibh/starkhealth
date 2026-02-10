@@ -11,13 +11,16 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.39",
     "@ai-sdk/react": "^3.0.80",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "ai": "^6.0.78",
+    "mcp-handler": "^1.0.7",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
