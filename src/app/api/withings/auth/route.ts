@@ -9,16 +9,14 @@ export async function GET() {
   const clientId = process.env.WITHINGS_CLIENT_ID;
   if (!clientId) return NextResponse.json({ error: "Withings not configured" }, { status: 500 });
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "https://starkhealth.io"}/auth/withings/callback`;
-  const scopes = "user.metrics,user.activity";
+  const redirectUri = encodeURIComponent(
+    `${process.env.NEXT_PUBLIC_SITE_URL || "https://starkhealth.io"}/auth/withings/callback`
+  );
+  const scope = "user.metrics,user.activity";
   const state = user.id;
 
-  const authUrl = new URL("https://account.withings.com/oauth2_user/authorize2");
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("client_id", clientId);
-  authUrl.searchParams.set("redirect_uri", redirectUri);
-  authUrl.searchParams.set("scope", scopes);
-  authUrl.searchParams.set("state", state);
+  // Build URL manually — Withings is picky about encoding
+  const authUrl = `https://account.withings.com/oauth2_user/authorize2?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
 
-  return NextResponse.redirect(authUrl.toString());
+  return NextResponse.redirect(authUrl);
 }
