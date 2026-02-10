@@ -19,7 +19,9 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 - **Muscle Fatigue Map** — Visual body heat map showing training load per muscle group
 - **Strength Progression** — Track key lifts (bench, squat, deadlift, OHP) over time
 - **Light/Dark Theme** — Full theme system with toggle, persisted to localStorage
-- **Privacy-First** — Bring your own API keys, self-host your database, own your data
+- **Units Preference** — Switch between metric (kg, km) and imperial (lbs, mi) in Settings
+- **Account Management** — Full sign up/in/out flow, account deletion with confirmation
+- **Privacy-First** — Bring your own API keys, self-host your database, own your data. No mock data in production — only real provider data shown
 - **Data Caching** — Health data cached in Supabase with 4-hour TTL for fast loads
 
 ### Supported Integrations

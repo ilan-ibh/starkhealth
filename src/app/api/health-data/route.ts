@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { fetchWhoopData } from "@/lib/providers/whoop";
 import { fetchWithingsData } from "@/lib/providers/withings";
 import { fetchHevyData } from "@/lib/providers/hevy";
-import { sampleData as mockWhoop } from "@/lib/sample-data";
-import { hevyWorkouts as mockHevy } from "@/lib/hevy-data";
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
@@ -88,11 +86,7 @@ export async function GET() {
       : null,
   ]);
 
-  const useMockWhoop = !whoopData;
-  const useMockWithings = !withingsData;
-  const useMockHevy = !hevyData;
-
-  // Build day map
+  // Build day map — no mock data, only real provider data
   const dayMap: Record<string, DayRow> = {};
   const emptyDay = (date: string): DayRow => ({
     date, recovery: null, hrv: null, rhr: null, strain: null, calories: null,
@@ -100,27 +94,13 @@ export async function GET() {
     weight: null, bodyFat: null, muscleMass: null, steps: null,
   });
 
-  if (useMockWhoop) {
-    for (const d of mockWhoop) {
-      dayMap[d.date] = {
-        date: d.date,
-        recovery: d.recovery, hrv: d.hrv, rhr: d.rhr,
-        strain: d.strain, calories: d.calories,
-        sleepHours: d.sleepHours, sleepScore: d.sleepScore,
-        deepSleep: d.deepSleep, remSleep: d.remSleep, lightSleep: d.lightSleep, awake: d.awake,
-        weight: useMockWithings ? d.weight : null,
-        bodyFat: useMockWithings ? d.bodyFat : null,
-        muscleMass: useMockWithings ? d.muscleMass : null,
-        steps: useMockWithings ? d.steps : null,
-      };
-    }
-  } else {
+  if (whoopData) {
     for (const d of whoopData) {
       dayMap[d.date] = { ...emptyDay(d.date), ...d };
     }
   }
 
-  if (!useMockWithings && withingsData) {
+  if (withingsData) {
     for (const d of withingsData) {
       if (!dayMap[d.date]) dayMap[d.date] = emptyDay(d.date);
       if (d.weight !== null) dayMap[d.date].weight = d.weight;
@@ -131,12 +111,12 @@ export async function GET() {
   }
 
   const days = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
-  const workouts = useMockHevy ? mockHevy : hevyData;
+  const workouts = hevyData || [];
 
   // ── Write to cache ─────────────────────────────────────────────────────
   if (hasAnyProvider) {
     // Cache days
-    if (days.length > 0 && !useMockWhoop) {
+    if (days.length > 0) {
       const rows = days.map((d) => ({
         user_id: user.id,
         date: d.date,
@@ -148,7 +128,7 @@ export async function GET() {
     }
 
     // Cache workouts
-    if (workouts && !useMockHevy && Array.isArray(workouts) && workouts.length > 0) {
+    if (workouts && Array.isArray(workouts) && workouts.length > 0) {
       const wRows = workouts.map((w) => ({
         user_id: user.id,
         workout_id: w.id,
@@ -164,7 +144,6 @@ export async function GET() {
     providers,
     days,
     workouts: workouts || [],
-    usingMock: { whoop: useMockWhoop, withings: useMockWithings, hevy: useMockHevy },
     cached: false,
   });
 }

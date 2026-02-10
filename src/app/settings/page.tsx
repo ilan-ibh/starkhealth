@@ -27,6 +27,9 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [units, setUnits] = useState("metric");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const AI_MODELS = [
     { id: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5", desc: "Fast, great for daily use" },
@@ -46,6 +49,7 @@ export default function Settings() {
         setMaskedKey(data.anthropic_api_key_masked);
         setHasKey(data.has_api_key);
         if (data.ai_model) setAiModel(data.ai_model);
+        if (data.units) setUnits(data.units);
       }
 
       // Load provider connection status
@@ -75,6 +79,18 @@ export default function Settings() {
   const [hevyKeySaved, setHevyKeySaved] = useState(false);
 
   const signOut = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push("/"); router.refresh(); };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    const res = await fetch("/api/account", { method: "DELETE" });
+    if (res.ok) { router.push("/"); router.refresh(); }
+    else { setDeleting(false); setDeleteConfirm(false); }
+  };
+
+  const toggleUnits = async (newUnits: string) => {
+    setUnits(newUnits);
+    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ units: newUnits }) });
+  };
 
   const connectProvider = (id: string) => {
     // OAuth providers redirect to auth endpoint
@@ -278,6 +294,15 @@ export default function Settings() {
             </div>
             <div className="rounded-2xl border border-edge bg-card p-5">
               <div className="flex items-center justify-between">
+                <div><p className="text-sm font-light text-t2">Units</p><p className="text-[11px] font-light text-t4">Display measurements in your preferred system</p></div>
+                <div className="flex rounded-lg border border-edge">
+                  <button onClick={() => toggleUnits("metric")} className={`px-3 py-1.5 text-[11px] font-light transition-all ${units === "metric" ? "bg-btn-h text-t1" : "text-t4 hover:text-t2"}`}>Metric</button>
+                  <button onClick={() => toggleUnits("imperial")} className={`px-3 py-1.5 text-[11px] font-light transition-all ${units === "imperial" ? "bg-btn-h text-t1" : "text-t4 hover:text-t2"}`}>Imperial</button>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-edge bg-card p-5">
+              <div className="flex items-center justify-between">
                 <div><p className="text-sm font-light text-t2">Data &amp; Privacy</p><p className="text-[11px] font-light text-t4">Manage your data and export options</p></div>
                 <Link href="/privacy" className="text-[11px] font-light tracking-wider text-t4 transition-colors hover:text-t2">View Policy</Link>
               </div>
@@ -289,10 +314,23 @@ export default function Settings() {
         <section className="mt-14 pb-12">
           <h2 className="text-[10px] font-medium tracking-[0.25em] text-red-500/60 uppercase">Danger Zone</h2>
           <div className="mt-6 rounded-2xl border border-red-500/15 bg-red-500/[0.03] p-5">
-            <div className="flex items-center justify-between">
-              <div><p className="text-sm font-light text-t2">Delete Account</p><p className="text-[11px] font-light text-t4">Permanently delete your account and all associated data</p></div>
-              <button className="rounded-full border border-red-500/20 px-4 py-1.5 text-[11px] font-light tracking-wider text-red-500/70 transition-all hover:border-red-500/40 hover:text-red-500">Delete</button>
-            </div>
+            {!deleteConfirm ? (
+              <div className="flex items-center justify-between">
+                <div><p className="text-sm font-light text-t2">Delete Account</p><p className="text-[11px] font-light text-t4">Permanently delete your account and all associated data</p></div>
+                <button onClick={() => setDeleteConfirm(true)} className="rounded-full border border-red-500/20 px-4 py-1.5 text-[11px] font-light tracking-wider text-red-500/70 transition-all hover:border-red-500/40 hover:text-red-500">Delete</button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-light text-red-500">Are you sure? This cannot be undone.</p>
+                <p className="mt-1 text-[11px] font-light text-t4">All your data, connections, and cached health data will be permanently deleted.</p>
+                <div className="mt-4 flex gap-3">
+                  <button onClick={deleteAccount} disabled={deleting} className="rounded-full bg-red-500 px-5 py-2 text-[11px] font-light tracking-wider text-white transition-all hover:bg-red-600 disabled:opacity-50">
+                    {deleting ? "Deleting..." : "Yes, delete my account"}
+                  </button>
+                  <button onClick={() => setDeleteConfirm(false)} className="rounded-full border border-edge px-5 py-2 text-[11px] font-light tracking-wider text-t3 transition-all hover:border-edge-h">Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>
