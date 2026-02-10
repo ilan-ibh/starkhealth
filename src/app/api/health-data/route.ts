@@ -6,6 +6,17 @@ import { fetchHevyData } from "@/lib/providers/hevy";
 import { sampleData as mockWhoop } from "@/lib/sample-data";
 import { hevyWorkouts as mockHevy } from "@/lib/hevy-data";
 
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+interface DayRow {
+  date: string;
+  recovery: number | null; hrv: number | null; rhr: number | null;
+  strain: number | null; calories: number | null;
+  sleepHours: number | null; sleepScore: number | null;
+  deepSleep: number | null; remSleep: number | null; lightSleep: number | null; awake: number | null;
+  weight: number | null; bodyFat: number | null; muscleMass: number | null; steps: number | null;
+}
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,15 +25,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get all provider tokens for this user
+  // Get provider tokens
   const { data: tokens } = await supabase
     .from("provider_tokens")
     .select("provider, access_token, refresh_token, expires_at")
     .eq("user_id", user.id);
 
-  const tokenMap = Object.fromEntries(
-    (tokens || []).map((t) => [t.provider, t])
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenMap = Object.fromEntries((tokens || []).map((t: any) => [t.provider, t]));
 
   const providers = {
     whoop: !!tokenMap.whoop,
@@ -30,49 +40,59 @@ export async function GET() {
     hevy: !!tokenMap.hevy,
   };
 
-  // Fetch data from connected providers (parallel), fallback to mock
+  const hasAnyProvider = providers.whoop || providers.withings || providers.hevy;
+
+  // ── Check cache ────────────────────────────────────────────────────────
+  if (hasAnyProvider) {
+    const { data: cachedDays } = await supabase
+      .from("health_cache")
+      .select("date, data, synced_at")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true });
+
+    const { data: cachedWorkouts } = await supabase
+      .from("workout_cache")
+      .select("workout_id, data, synced_at")
+      .eq("user_id", user.id);
+
+    // Check if cache is fresh (any row synced within TTL)
+    const now = Date.now();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isFresh = cachedDays && cachedDays.length > 0 && cachedDays.some((r: any) =>
+      now - new Date(r.synced_at).getTime() < CACHE_TTL_MS
+    );
+
+    if (isFresh) {
+      return NextResponse.json({
+        providers,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        days: cachedDays.map((r: any) => r.data),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        workouts: (cachedWorkouts || []).map((r: any) => r.data),
+        usingMock: { whoop: false, withings: false, hevy: false },
+        cached: true,
+      });
+    }
+  }
+
+  // ── Fetch fresh data ───────────────────────────────────────────────────
   const [whoopData, withingsData, hevyData] = await Promise.all([
-    // WHOOP
     providers.whoop
-      ? fetchWhoopData(supabase, user.id, tokenMap.whoop).catch((e) => {
-          console.error("WHOOP fetch error:", e);
-          return null;
-        })
+      ? fetchWhoopData(supabase, user.id, tokenMap.whoop).catch((e) => { console.error("WHOOP fetch error:", e); return null; })
       : null,
-
-    // Withings
     providers.withings
-      ? fetchWithingsData(supabase, user.id, tokenMap.withings).catch((e) => {
-          console.error("Withings fetch error:", e);
-          return null;
-        })
+      ? fetchWithingsData(supabase, user.id, tokenMap.withings).catch((e) => { console.error("Withings fetch error:", e); return null; })
       : null,
-
-    // Hevy
     providers.hevy
-      ? fetchHevyData(tokenMap.hevy.access_token).catch((e) => {
-          console.error("Hevy fetch error:", e);
-          return null;
-        })
+      ? fetchHevyData(tokenMap.hevy.access_token).catch((e) => { console.error("Hevy fetch error:", e); return null; })
       : null,
   ]);
 
-  // Build unified day data — merge WHOOP + Withings by date
-  // If provider returned data, use it. Otherwise use mock.
   const useMockWhoop = !whoopData;
   const useMockWithings = !withingsData;
   const useMockHevy = !hevyData;
 
   // Build day map
-  interface DayRow {
-    date: string;
-    recovery: number | null; hrv: number | null; rhr: number | null;
-    strain: number | null; calories: number | null;
-    sleepHours: number | null; sleepScore: number | null;
-    deepSleep: number | null; remSleep: number | null; lightSleep: number | null; awake: number | null;
-    weight: number | null; bodyFat: number | null; muscleMass: number | null; steps: number | null;
-  }
-
   const dayMap: Record<string, DayRow> = {};
   const emptyDay = (date: string): DayRow => ({
     date, recovery: null, hrv: null, rhr: null, strain: null, calories: null,
@@ -81,7 +101,6 @@ export async function GET() {
   });
 
   if (useMockWhoop) {
-    // Use mock WHOOP + Withings data (they're combined in sample-data)
     for (const d of mockWhoop) {
       dayMap[d.date] = {
         date: d.date,
@@ -101,7 +120,6 @@ export async function GET() {
     }
   }
 
-  // Overlay Withings real data
   if (!useMockWithings && withingsData) {
     for (const d of withingsData) {
       if (!dayMap[d.date]) dayMap[d.date] = emptyDay(d.date);
@@ -113,11 +131,40 @@ export async function GET() {
   }
 
   const days = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+  const workouts = useMockHevy ? mockHevy : hevyData;
+
+  // ── Write to cache ─────────────────────────────────────────────────────
+  if (hasAnyProvider) {
+    // Cache days
+    if (days.length > 0 && !useMockWhoop) {
+      const rows = days.map((d) => ({
+        user_id: user.id,
+        date: d.date,
+        data: d,
+        synced_at: new Date().toISOString(),
+      }));
+      const { error: cacheErr } = await supabase.from("health_cache").upsert(rows, { onConflict: "user_id,date" });
+      if (cacheErr) console.error("Cache write error:", cacheErr);
+    }
+
+    // Cache workouts
+    if (workouts && !useMockHevy && Array.isArray(workouts) && workouts.length > 0) {
+      const wRows = workouts.map((w) => ({
+        user_id: user.id,
+        workout_id: w.id,
+        data: w,
+        synced_at: new Date().toISOString(),
+      }));
+      const { error: wCacheErr } = await supabase.from("workout_cache").upsert(wRows, { onConflict: "user_id,workout_id" });
+      if (wCacheErr) console.error("Workout cache write error:", wCacheErr);
+    }
+  }
 
   return NextResponse.json({
     providers,
     days,
-    workouts: useMockHevy ? mockHevy : hevyData,
+    workouts: workouts || [],
     usingMock: { whoop: useMockWhoop, withings: useMockWithings, hevy: useMockHevy },
+    cached: false,
   });
 }

@@ -6,6 +6,7 @@ import Image from "next/image";
 import type { DayData } from "@/lib/sample-data";
 import type { MuscleGroup } from "@/lib/hevy-data";
 import { MetricCard } from "@/components/MetricCard";
+import { MetricDetail } from "@/components/MetricDetail";
 import { HealthScore } from "@/components/HealthScore";
 import { RecoveryChart, BodyChart, SleepChart } from "@/components/Charts";
 import { MuscleMap } from "@/components/MuscleMap";
@@ -188,6 +189,7 @@ export default function Dashboard() {
   const [workouts, setWorkouts] = useState<RawWorkout[]>([]);
   const [providers, setProviders] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch settings + health data in parallel
@@ -212,12 +214,12 @@ export default function Dashboard() {
   const muscleLoads = useMemo(() => computeMuscleLoads(workouts), [workouts]);
 
   const metrics = latest ? [
-    { label: "Recovery", value: latest.recovery ?? 0, unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
-    { label: "HRV", value: latest.hrv ?? 0, unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
-    { label: "Sleep", value: latest.sleepHours ?? 0, unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
-    { label: "Strain", value: latest.strain ?? 0, unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
-    { label: "Weight", value: latest.weight ?? 0, unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
-    { label: "Body Fat", value: latest.bodyFat ?? 0, unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
+    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: latest.recovery ?? 0, unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
+    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: latest.hrv ?? 0, unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
+    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: latest.sleepHours ?? 0, unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
+    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: latest.strain ?? 0, unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
+    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: latest.weight ?? 0, unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
+    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: latest.bodyFat ?? 0, unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
   ] : [];
 
   if (loading) {
@@ -282,9 +284,33 @@ export default function Dashboard() {
         </div>
 
         {metrics.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-            {metrics.map((m, i) => (<MetricCard key={m.label} {...m} delay={i * 80} />))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {metrics.map((m, i) => (
+                <MetricCard
+                  key={m.label}
+                  {...m}
+                  delay={i * 80}
+                  active={selectedMetric === m.label}
+                  onClick={() => setSelectedMetric(selectedMetric === m.label ? null : m.label)}
+                />
+              ))}
+            </div>
+            {selectedMetric && (() => {
+              const m = metrics.find((x) => x.label === selectedMetric);
+              if (!m) return null;
+              return (
+                <MetricDetail
+                  label={m.label}
+                  dataKey={m.dataKey}
+                  unit={m.unit}
+                  color={m.color}
+                  days={days as DayData[]}
+                  onClose={() => setSelectedMetric(null)}
+                />
+              );
+            })()}
+          </>
         ) : (
           <div className="rounded-2xl border border-edge bg-card p-8 text-center">
             <p className="text-sm font-light text-t3">Connect WHOOP or Withings in Settings to see your metrics</p>

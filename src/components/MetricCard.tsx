@@ -9,9 +9,11 @@ interface Props {
   sparkline: number[];
   color: string;
   delay?: number;
+  onClick?: () => void;
+  active?: boolean;
 }
 
-export function MetricCard({ label, value, unit, delta, positive, sparkline, color, delay = 0 }: Props) {
+export function MetricCard({ label, value, unit, delta, positive, sparkline, color, delay = 0, onClick, active }: Props) {
   const w = 80, h = 28;
   const min = Math.min(...sparkline), max = Math.max(...sparkline);
   const range = max - min || 1;
@@ -21,7 +23,9 @@ export function MetricCard({ label, value, unit, delta, positive, sparkline, col
   const gradientId = `spark-${label.replace(/\s+/g, "-")}`;
 
   return (
-    <div className="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-edge bg-card p-5 transition-all duration-300 hover:border-edge-s hover:bg-card-h"
+    <div
+      onClick={onClick}
+      className={`animate-fade-in-up group relative overflow-hidden rounded-2xl border bg-card p-5 transition-all duration-300 hover:border-edge-s hover:bg-card-h ${active ? "border-edge-h ring-1 ring-edge-s" : "border-edge"} ${onClick ? "cursor-pointer" : ""}`}
       style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
       <p className="text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">{label}</p>
       <div className="mt-2 flex items-baseline gap-1.5">

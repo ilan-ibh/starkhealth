@@ -1,9 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { createClient } from "@/lib/supabase/server";
-import { fetchWhoopData } from "@/lib/providers/whoop";
-import { fetchWithingsData } from "@/lib/providers/withings";
-import { fetchHevyData } from "@/lib/providers/hevy";
 
 const VALID_MODELS = [
   "claude-sonnet-4-5-20250929",
@@ -12,67 +9,73 @@ const VALID_MODELS = [
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function buildHealthContext(supabase: any, userId: string): Promise<string> {
-  const { data: tokens } = await supabase
-    .from("provider_tokens")
-    .select("provider, access_token, refresh_token, expires_at")
+  // Read from cache (populated by /api/health-data)
+  const { data: cachedDays } = await supabase
+    .from("health_cache")
+    .select("data")
+    .eq("user_id", userId)
+    .order("date", { ascending: true });
+
+  const { data: cachedWorkouts } = await supabase
+    .from("workout_cache")
+    .select("data")
     .eq("user_id", userId);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tokenMap = Object.fromEntries((tokens || []).map((t: any) => [t.provider, t]));
   const sections: string[] = [];
 
-  // WHOOP data
-  if (tokenMap.whoop) {
-    try {
-      const data = await fetchWhoopData(supabase, userId, tokenMap.whoop);
-      if (data.length > 0) {
-        const latest = data[data.length - 1];
-        const first = data[0];
-        sections.push(`WHOOP DATA (${first.date} → ${latest.date}, ${data.length} days):
-Latest: Recovery ${latest.recovery ?? "N/A"}% | HRV ${latest.hrv ?? "N/A"}ms | RHR ${latest.rhr ?? "N/A"}bpm
-Sleep: ${latest.sleepHours ?? "N/A"}h (score ${latest.sleepScore ?? "N/A"}%) — Deep ${latest.deepSleep ?? "N/A"}h, REM ${latest.remSleep ?? "N/A"}h, Light ${latest.lightSleep ?? "N/A"}h
-Strain: ${latest.strain ?? "N/A"} | Calories: ${latest.calories ?? "N/A"}
-Full data: ${JSON.stringify(data)}`);
-      }
-    } catch (e) {
-      sections.push(`WHOOP: Connected but failed to fetch (${(e as Error).message})`);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const days = (cachedDays || []).map((r: any) => r.data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const workouts = (cachedWorkouts || []).map((r: any) => r.data);
+
+  if (days.length > 0) {
+    const latest = days[days.length - 1];
+    const first = days[0];
+
+    // Compute 7-day averages
+    const last7 = days.slice(-7);
+    const avg = (key: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vals = last7.map((d: any) => d[key]).filter((v: unknown) => v != null) as number[];
+      return vals.length ? Math.round((vals.reduce((a: number, b: number) => a + b, 0) / vals.length) * 10) / 10 : "N/A";
+    };
+
+    sections.push(`DAILY HEALTH DATA (${first.date} → ${latest.date}, ${days.length} days):
+
+TODAY (${latest.date}):
+• Recovery: ${latest.recovery ?? "N/A"}% | HRV: ${latest.hrv ?? "N/A"}ms | RHR: ${latest.rhr ?? "N/A"}bpm
+• Sleep: ${latest.sleepHours ?? "N/A"}h (score ${latest.sleepScore ?? "N/A"}%) — Deep ${latest.deepSleep ?? "N/A"}h, REM ${latest.remSleep ?? "N/A"}h, Light ${latest.lightSleep ?? "N/A"}h
+• Strain: ${latest.strain ?? "N/A"} | Calories: ${latest.calories ?? "N/A"}
+• Weight: ${latest.weight ?? "N/A"}kg | Body Fat: ${latest.bodyFat ?? "N/A"}% | Muscle Mass: ${latest.muscleMass ?? "N/A"}kg
+• Steps: ${latest.steps ?? "N/A"}
+
+7-DAY AVERAGES:
+• Recovery: ${avg("recovery")}% | HRV: ${avg("hrv")}ms | Sleep: ${avg("sleepHours")}h
+• Strain: ${avg("strain")} | Weight: ${avg("weight")}kg | Body Fat: ${avg("bodyFat")}%
+
+30-DAY TRENDS:
+• Recovery: ${first.recovery ?? "?"} → ${latest.recovery ?? "?"} | HRV: ${first.hrv ?? "?"} → ${latest.hrv ?? "?"}ms
+• Weight: ${first.weight ?? "?"}kg → ${latest.weight ?? "?"}kg | Body Fat: ${first.bodyFat ?? "?"}% → ${latest.bodyFat ?? "?"}%
+
+FULL DAILY DATA (JSON):
+${JSON.stringify(days)}`);
   }
 
-  // Withings data
-  if (tokenMap.withings) {
-    try {
-      const data = await fetchWithingsData(supabase, userId, tokenMap.withings);
-      if (data.length > 0) {
-        const latest = data[data.length - 1];
-        sections.push(`WITHINGS DATA (${data.length} measurements):
-Latest: Weight ${latest.weight ?? "N/A"}kg | Body Fat ${latest.bodyFat ?? "N/A"}% | Muscle Mass ${latest.muscleMass ?? "N/A"}kg | Steps ${latest.steps ?? "N/A"}
-Full data: ${JSON.stringify(data)}`);
-      }
-    } catch (e) {
-      sections.push(`WITHINGS: Connected but failed to fetch (${(e as Error).message})`);
-    }
-  }
-
-  // Hevy data
-  if (tokenMap.hevy) {
-    try {
-      const workouts = await fetchHevyData(tokenMap.hevy.access_token);
-      if (workouts.length > 0) {
-        const totalVol = workouts.reduce((s, w) =>
-          s + w.exercises.reduce((es, ex) =>
-            es + ex.sets.filter((st) => st.type !== "warmup").reduce((ss, st) => ss + st.weight_kg * st.reps, 0), 0), 0);
-        sections.push(`HEVY WORKOUT DATA (${workouts.length} workouts):
-Total volume: ${Math.round(totalVol)}kg | Last workout: ${workouts[workouts.length - 1].title} on ${workouts[workouts.length - 1].date}
+  if (workouts.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalVol = workouts.reduce((s: number, w: any) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      s + (w.exercises || []).reduce((es: number, ex: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        es + (ex.sets || []).filter((st: any) => st.type !== "warmup").reduce((ss: number, st: any) => ss + (st.weight_kg || 0) * (st.reps || 0), 0), 0), 0);
+    const last = workouts[workouts.length - 1];
+    sections.push(`WORKOUT DATA (${workouts.length} workouts):
+Total volume: ${Math.round(totalVol)}kg | Last workout: ${last.title || "Workout"} on ${last.date}
 Full data: ${JSON.stringify(workouts)}`);
-      }
-    } catch (e) {
-      sections.push(`HEVY: Connected but failed to fetch (${(e as Error).message})`);
-    }
   }
 
   if (sections.length === 0) {
-    return "No health data providers are connected yet. The user needs to connect WHOOP, Withings, or Hevy in their Settings.";
+    return "No health data is cached yet. The user needs to connect providers in Settings and load the dashboard at least once to sync data.";
   }
 
   return sections.join("\n\n");
