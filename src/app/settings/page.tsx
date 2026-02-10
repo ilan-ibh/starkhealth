@@ -52,18 +52,12 @@ export default function Settings() {
         if (data.ai_model) setAiModel(data.ai_model);
         if (data.units) setUnits(data.units);
         if (data.mcp_token) setMcpToken(data.mcp_token);
-      }
-
-      // Load provider connection status
-      const healthRes = await fetch("/api/health-data");
-      if (healthRes.ok) {
-        const healthData = await healthRes.json();
-        setConnections((prev) =>
-          prev.map((c) => ({
-            ...c,
-            connected: healthData.providers?.[c.id] ?? false,
-          }))
-        );
+        // Provider status comes from /api/settings now (fast, no data fetch)
+        if (data.providers) {
+          setConnections((prev) =>
+            prev.map((c) => ({ ...c, connected: data.providers[c.id] ?? false }))
+          );
+        }
       }
     };
     load();

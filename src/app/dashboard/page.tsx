@@ -275,8 +275,8 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* API Key Banner */}
-      {hasApiKey === false && (
+      {/* API Key Banner — only show after loading completes */}
+      {!loading && hasApiKey === false && (
         <div className="border-b border-amber-500/10 bg-amber-500/[0.06] px-6 py-3">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
             <p className="text-[12px] font-light text-amber-700 dark:text-amber-300/70">Add your Anthropic API key in Settings to enable the AI assistant.</p>

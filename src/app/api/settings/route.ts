@@ -27,12 +27,25 @@ export async function GET() {
       data.anthropic_api_key.slice(-4)
     : null;
 
+  // Also check which providers are connected (fast — just checks token existence)
+  const { data: tokens } = await supabase
+    .from("provider_tokens")
+    .select("provider")
+    .eq("user_id", user.id);
+
+  const providers = {
+    whoop: (tokens || []).some((t) => t.provider === "whoop"),
+    withings: (tokens || []).some((t) => t.provider === "withings"),
+    hevy: (tokens || []).some((t) => t.provider === "hevy"),
+  };
+
   return NextResponse.json({
     anthropic_api_key_masked: masked,
     has_api_key: !!data.anthropic_api_key,
     ai_model: data.ai_model || "claude-sonnet-4-5-20250929",
     units: data.units,
     mcp_token: data.mcp_token || null,
+    providers,
   });
 }
 
