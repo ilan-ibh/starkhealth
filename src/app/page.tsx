@@ -35,19 +35,19 @@ export default function Home() {
           <Image
             src="/logos/whoop.png"
             alt="WHOOP"
-            width={100}
-            height={28}
-            className="logo-adaptive h-5 w-auto object-contain opacity-35"
+            width={120}
+            height={34}
+            className="logo-adaptive h-[18px] w-auto object-contain opacity-35"
           />
           <Image
             src="/logos/withings.png"
             alt="Withings"
-            width={100}
-            height={28}
-            className="logo-adaptive h-[14px] w-auto object-contain opacity-35"
+            width={120}
+            height={16}
+            className="logo-adaptive h-[15px] w-auto object-contain opacity-35"
           />
-          <span className="text-[14px] font-medium tracking-[0.05em] text-t1 opacity-30">
-            Hevy
+          <span className="text-[16px] font-semibold tracking-tight text-t1 opacity-30">
+            hevy
           </span>
           <span className="text-[12px] font-light tracking-wider text-tm italic">
             &amp; more
