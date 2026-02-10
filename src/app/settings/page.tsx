@@ -21,9 +21,15 @@ export default function Settings() {
   const [apiKey, setApiKey] = useState("");
   const [maskedKey, setMaskedKey] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState(false);
+  const [aiModel, setAiModel] = useState("claude-sonnet-4-5-20250929");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+
+  const AI_MODELS = [
+    { id: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5", desc: "Fast, great for daily use" },
+    { id: "claude-opus-4-6", name: "Claude Opus 4.6", desc: "Most capable, deeper analysis" },
+  ];
 
   useEffect(() => {
     const load = async () => {
@@ -31,7 +37,12 @@ export default function Settings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserEmail(user.email || "");
       const res = await fetch("/api/settings");
-      if (res.ok) { const data = await res.json(); setMaskedKey(data.anthropic_api_key_masked); setHasKey(data.has_api_key); }
+      if (res.ok) {
+        const data = await res.json();
+        setMaskedKey(data.anthropic_api_key_masked);
+        setHasKey(data.has_api_key);
+        if (data.ai_model) setAiModel(data.ai_model);
+      }
     };
     load();
   }, []);
@@ -91,6 +102,42 @@ export default function Settings() {
                 className="shrink-0 rounded-xl bg-btn px-5 py-2.5 text-[12px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h disabled:opacity-30">
                 {saving ? "Saving..." : saved ? "Saved" : "Save"}
               </button>
+            </div>
+          </div>
+
+          {/* Model Selector */}
+          <div className="mt-4 rounded-2xl border border-edge bg-card p-6">
+            <h3 className="text-sm font-light tracking-wider text-t1">AI Model</h3>
+            <p className="mt-0.5 text-[11px] font-light text-t4">Choose which Claude model powers your health assistant</p>
+            <div className="mt-4 space-y-2.5">
+              {AI_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={async () => {
+                    setAiModel(m.id);
+                    await fetch("/api/settings", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ai_model: m.id }),
+                    });
+                  }}
+                  className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-all ${
+                    aiModel === m.id
+                      ? "border-edge-h bg-card-h"
+                      : "border-edge bg-page hover:border-edge-s"
+                  }`}
+                >
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    aiModel === m.id ? "border-emerald-500" : "border-edge-s"
+                  }`}>
+                    {aiModel === m.id && <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-light text-t1">{m.name}</p>
+                    <p className="text-[11px] font-light text-t4">{m.desc}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </section>

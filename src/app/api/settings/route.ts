@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("anthropic_api_key, units")
+    .select("anthropic_api_key, ai_model, units")
     .eq("id", user.id)
     .single();
 
@@ -21,7 +21,6 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Mask the API key for the client
   const masked = data.anthropic_api_key
     ? data.anthropic_api_key.slice(0, 12) +
       "•".repeat(20) +
@@ -31,6 +30,7 @@ export async function GET() {
   return NextResponse.json({
     anthropic_api_key_masked: masked,
     has_api_key: !!data.anthropic_api_key,
+    ai_model: data.ai_model || "claude-sonnet-4-5-20250929",
     units: data.units,
   });
 }
@@ -50,6 +50,9 @@ export async function PUT(req: Request) {
 
   if (body.anthropic_api_key !== undefined) {
     updates.anthropic_api_key = body.anthropic_api_key;
+  }
+  if (body.ai_model !== undefined) {
+    updates.ai_model = body.ai_model;
   }
   if (body.units !== undefined) {
     updates.units = body.units;

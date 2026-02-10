@@ -7,6 +7,7 @@
 create table public.profiles (
   id            uuid references auth.users on delete cascade primary key,
   anthropic_api_key text,
+  ai_model      text default 'claude-sonnet-4-5-20250929',
   units         text default 'metric' check (units in ('metric', 'imperial')),
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()

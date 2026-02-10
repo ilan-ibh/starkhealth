@@ -3,6 +3,11 @@ import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { getDataSummaryForAI } from "@/lib/sample-data";
 import { createClient } from "@/lib/supabase/server";
 
+const VALID_MODELS = [
+  "claude-sonnet-4-5-20250929",
+  "claude-opus-4-6",
+];
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -15,10 +20,9 @@ export async function POST(req: Request) {
     });
   }
 
-  // Get user's API key
   const { data: profile } = await supabase
     .from("profiles")
-    .select("anthropic_api_key")
+    .select("anthropic_api_key, ai_model")
     .eq("id", user.id)
     .single();
 
@@ -33,13 +37,16 @@ export async function POST(req: Request) {
     );
   }
 
+  const modelId = VALID_MODELS.includes(profile?.ai_model)
+    ? profile.ai_model
+    : "claude-sonnet-4-5-20250929";
+
   const { messages } = (await req.json()) as { messages: UIMessage[] };
 
-  // Create Anthropic client with the user's own key
   const anthropic = createAnthropic({ apiKey });
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-5-20250929"),
+    model: anthropic(modelId),
     system: `You are a personal health advisor for Stark Health, an integrated health data platform combining WHOOP (recovery, HRV, sleep, strain) and Withings (weight, body composition) data.
 
 ${getDataSummaryForAI()}
