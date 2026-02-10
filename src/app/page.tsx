@@ -27,7 +27,7 @@ export default function Home() {
         <div className="animate-fade-in animate-delay-400 animate-pulse-line my-10 h-px w-24 bg-edge-h" />
 
         <p className="animate-fade-in-up animate-delay-400 max-w-md text-sm font-light tracking-[0.15em] text-t3 uppercase">
-          Your health data, unified
+          Health intelligence, unified
         </p>
 
         {/* Integration logos */}
