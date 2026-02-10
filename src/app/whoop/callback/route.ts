@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Exchange code for tokens — must match exactly what was sent in auth request
-  const redirectUri = "https://starkhealth.io/whoop/callback";
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/whoop/callback`;
   const tokenRes = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

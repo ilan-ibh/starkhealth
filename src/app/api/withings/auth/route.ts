@@ -9,7 +9,7 @@ export async function GET() {
   const clientId = process.env.WITHINGS_CLIENT_ID;
   if (!clientId) return NextResponse.json({ error: "Withings not configured" }, { status: 500 });
 
-  const redirectUri = "https://starkhealth.io/auth/withings/callback";
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/withings/callback`;
   const scope = "user.metrics,user.activity";
   const state = user.id;
 

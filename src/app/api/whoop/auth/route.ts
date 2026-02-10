@@ -9,7 +9,7 @@ export async function GET() {
   const clientId = process.env.WHOOP_CLIENT_ID;
   if (!clientId) return NextResponse.json({ error: "WHOOP not configured" }, { status: 500 });
 
-  const redirectUri = "https://starkhealth.io/whoop/callback";
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/whoop/callback`;
   const scopes = "read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement offline";
   const state = user.id;
 
