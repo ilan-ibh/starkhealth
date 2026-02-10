@@ -27,11 +27,33 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 
 ### Screenshots
 
-![Dashboard](docs/screenshots/dashboard-dark.png)
+**Dashboard — Today's Snapshot & Recovery**
+Your Stark Health Score, today's key metrics (Recovery, HRV, Sleep, Strain, Weight, Body Fat), and recovery/sleep trend charts. Click any metric card to drill into 7/14/30-day trends.
 
-![AI Coach](docs/screenshots/ai-chat.png)
+![Dashboard Overview](docs/screenshots/dashboard-1.png)
+
+**Dashboard — Body Composition & Cross-Source Insights**
+Body composition trends alongside AI-generated insights that cross-reference your WHOOP recovery, Withings body data, and Hevy training — updated automatically as new data comes in.
+
+![Body & Insights](docs/screenshots/dashboard-2.png)
+
+**Dashboard — Training Analytics**
+Hevy workout data: training frequency, weekly volume, strength progression for your actual exercises, muscle fatigue body map, and personal records.
+
+![Training](docs/screenshots/dashboard-3.png)
+
+**AI Health Coach — Ask Stark Health**
+Chat with your personal longevity coach. It has access to all your real health data and gives specific, data-driven recommendations — not generic advice.
+
+![AI Chat](docs/screenshots/ai-chat.png)
+
+**MCP Server — Connect External AI Agents**
+Generate an API token and connect agents like Open Claw to your health data via the Model Context Protocol. Your AI assistant gets direct access to your recovery, sleep, training, and body composition.
 
 ![MCP Integration](docs/screenshots/mcp-settings.png)
+
+**Settings — Connected Data Sources**
+Connect WHOOP and Withings via OAuth, add your Hevy API key, choose your Claude model, and manage your account.
 
 ![Connected Apps](docs/screenshots/connected-apps.png)
 
