@@ -47,14 +47,11 @@ export default function Home() {
 
       </div>
 
-      <footer className="absolute bottom-8 z-10 flex flex-col items-center gap-3">
-        <p className="text-[11px] font-light tracking-wider text-tm">
-          contact@starkhealth.io
-        </p>
+      <footer className="absolute bottom-8 z-10">
         <div className="flex items-center gap-6 text-[10px] tracking-wider text-tm">
           <span>&copy; {new Date().getFullYear()} Stark Health</span>
           <Link href="/privacy" className="transition-colors hover:text-t3">Privacy Policy</Link>
-        </div>
+      </div>
       </footer>
     </main>
   );
