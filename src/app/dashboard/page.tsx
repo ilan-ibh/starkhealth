@@ -99,7 +99,36 @@ export default function Dashboard() {
           {metrics.map((m, i) => (<MetricCard key={m.label} {...m} delay={i * 80} />))}
         </div>
 
-        {/* ── Hevy Quick Stats ────────────────────────────────────────── */}
+        {/* ── Recovery & Sleep (how did you recover?) ─────────────────── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <RecoveryChart data={sampleData} />
+          <SleepChart data={sampleData} />
+        </div>
+
+        {/* ── Body Composition (how is your body changing?) ────────────── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <BodyChart data={sampleData} />
+          <div className="rounded-2xl border border-edge bg-card p-5">
+            <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Cross-Source Insights</h3>
+            <p className="mb-3 text-[11px] font-light text-tm">WHOOP + Withings + Hevy combined</p>
+            <div className="space-y-2.5">
+              {INSIGHTS.map((ins, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
+                  <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
+                    {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
+                  </span>
+                  <p className="text-[11px] leading-relaxed font-light text-t3">{ins.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Training — Hevy (how is your training?) ─────────────────── */}
+        <div className="mt-2">
+          <h2 className="mb-4 text-[10px] font-medium tracking-[0.25em] text-t4 uppercase">Training — Hevy</h2>
+        </div>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "Workouts", value: hevySummary.totalWorkouts, sub: "this month" },
@@ -115,17 +144,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Recovery & Body Charts ──────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <RecoveryChart data={sampleData} />
-          <BodyChart data={sampleData} />
-        </div>
-
-        {/* ── Training Section ────────────────────────────────────────── */}
-        <div className="mt-2">
-          <h2 className="mb-4 text-[10px] font-medium tracking-[0.25em] text-t4 uppercase">Training — Hevy</h2>
-        </div>
-
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <StrengthChart data={getStrengthProgress()} />
           <MuscleMap loads={muscleLoads} />
@@ -136,24 +154,9 @@ export default function Dashboard() {
           <FrequencyChart data={getWorkoutFrequency()} />
         </div>
 
-        {/* ── Sleep + PRs + Insights ──────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <SleepChart data={sampleData} />
+        {/* ── Personal Records ────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <PersonalRecords records={getPersonalRecords()} />
-          <div className="rounded-2xl border border-edge bg-card p-5">
-            <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Cross-Source Insights</h3>
-            <p className="mb-3 text-[11px] font-light text-tm">WHOOP + Withings + Hevy combined</p>
-            <div className="space-y-2.5">
-              {INSIGHTS.map((ins, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
-                  <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
-                    {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
-                  </span>
-                  <p className="text-[11px] leading-relaxed font-light text-t3">{ins.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Data Sources */}
