@@ -19,6 +19,7 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 - **Muscle Fatigue Map** — Visual body heat map showing training load per muscle group
 - **Strength Progression** — Track key lifts (bench, squat, deadlift, OHP) over time
 - **Light/Dark Theme** — Full theme system with toggle, persisted to localStorage
+- **MCP Server** — External AI agents (like Open Claw) can access your health data and AI coach via the Model Context Protocol
 - **Units Preference** — Switch between metric (kg, km) and imperial (lbs, mi) in Settings
 - **Account Management** — Full sign up/in/out flow, account deletion with confirmation
 - **Privacy-First** — Bring your own API keys, self-host your database, own your data. No mock data in production — only real provider data shown
@@ -167,6 +168,7 @@ Created automatically when a user signs up.
 | `anthropic_api_key` | text | User's Anthropic API key |
 | `ai_model` | text | Selected AI model (`claude-sonnet-4-5-20250929` or `claude-opus-4-6`) |
 | `units` | text | `metric` or `imperial` |
+| `mcp_token` | text | MCP API token for external agent access |
 
 ### `provider_tokens`
 Stores OAuth tokens and API keys per provider per user.
@@ -207,9 +209,11 @@ Caches Hevy workout data.
 src/
 ├── app/
 │   ├── api/
+│   │   ├── [transport]/route.ts      # MCP server (refresh_health_data + ask_stark_health)
+│   │   ├── account/route.ts          # Account deletion
 │   │   ├── chat/route.ts             # AI chat (streams Claude responses from cached data)
 │   │   ├── health-data/route.ts      # Unified data endpoint (cache + provider fetch)
-│   │   ├── settings/route.ts         # User profile CRUD
+│   │   ├── settings/route.ts         # User profile CRUD + MCP token
 │   │   ├── whoop/auth/route.ts       # WHOOP OAuth initiation
 │   │   ├── whoop/callback/route.ts   # WHOOP OAuth callback
 │   │   └── withings/auth/route.ts    # Withings OAuth initiation
@@ -240,14 +244,16 @@ src/
 │   │   ├── client.ts                  # Browser Supabase client
 │   │   ├── middleware.ts              # Auth middleware helper
 │   │   └── server.ts                  # Server Supabase client
-│   ├── hevy-data.ts                   # Hevy mock data + analytics functions
-│   └── sample-data.ts                 # WHOOP/Withings mock data + types
+│   ├── health-context.ts              # Shared AI system prompt + data builder
+│   ├── hevy-data.ts                   # Hevy types + analytics functions
+│   └── sample-data.ts                 # WHOOP/Withings types
 └── middleware.ts                       # Route protection (/dashboard, /settings)
 
 supabase/
 ├── schema.sql                          # Core schema (profiles + triggers)
 ├── migration-002-providers.sql         # Provider token storage
-└── migration-003-cache.sql             # Health data cache tables
+├── migration-003-cache.sql             # Health data cache tables
+└── migration-004-mcp-token.sql         # MCP token column
 ```
 
 ---
@@ -287,9 +293,72 @@ The AI assistant uses a detailed system prompt designed to act as a longevity an
 
 Each user provides their own Anthropic API key — your data and API usage stay private.
 
+### MCP Server (Model Context Protocol)
+
+Stark Health exposes an MCP server that allows external AI agents to access your health data and the Stark Health AI coach. This means your personal AI assistant (like [Open Claw](https://github.com/openclaw)) can directly query your WHOOP, Withings, and Hevy data without you having to copy-paste anything.
+
+**Available MCP Tools:**
+
+| Tool | Description |
+|---|---|
+| `refresh_health_data` | Forces a fresh sync from all connected providers. Returns a structured summary of recovery, HRV, sleep, strain, weight, body composition, and workout data. |
+| `ask_stark_health` | Sends a question to the Stark Health AI coach with your full health data as context. Uses your selected Claude model. Returns personalized analysis and recommendations. |
+
+**Setup:**
+
+1. Go to **Settings > MCP Integration** in Stark Health
+2. Click **Generate Token** to create a dedicated API token
+3. Add the following to your MCP client configuration:
+
+```json
+{
+  "stark-health": {
+    "url": "https://your-domain.com/api/mcp",
+    "headers": {
+      "Authorization": "Bearer <your-mcp-token>"
+    }
+  }
+}
+```
+
+For stdio-only MCP clients, use the `mcp-remote` bridge:
+
+```json
+{
+  "stark-health": {
+    "command": "npx",
+    "args": [
+      "-y", "mcp-remote",
+      "https://your-domain.com/api/mcp",
+      "--header", "Authorization:Bearer <your-mcp-token>"
+    ]
+  }
+}
+```
+
+**Open Claw Integration:**
+
+If you use [Open Claw](https://github.com/openclaw) as your personal AI agent, adding Stark Health as an MCP server gives Open Claw direct access to all your health data. Open Claw can then:
+
+- Proactively check your recovery before suggesting a schedule for the day
+- Factor in your sleep quality when planning your workday
+- Ask Stark Health's AI coach for training recommendations and relay them to you
+- Cross-reference your health data with your calendar, tasks, and other tools
+- Answer questions like "How did I sleep last week?" or "Am I recovered enough to train today?" using real data
+
+This turns your health data from a passive dashboard into an active input for your AI-powered daily workflow.
+
 ---
 
-## Contributing
+## Database Schema
+
+Four tables with Row Level Security — users can only access their own data.
+
+*Note: Run all migration files in order when setting up:*
+1. `supabase/schema.sql`
+2. `supabase/migration-002-providers.sql`
+3. `supabase/migration-003-cache.sql`
+4. `supabase/migration-004-mcp-token.sql`
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
