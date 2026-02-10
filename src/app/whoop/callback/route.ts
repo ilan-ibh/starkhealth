@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/settings?error=whoop_auth_failed`);
   }
 
-  // Exchange code for tokens
-  const redirectUri = `${baseUrl}/whoop/callback`;
+  // Exchange code for tokens — must match exactly what was sent in auth request
+  const redirectUri = "https://starkhealth.io/whoop/callback";
   const tokenRes = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
