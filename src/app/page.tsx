@@ -15,7 +15,7 @@ export default function Home() {
         <div className="h-[600px] w-[600px] rounded-full bg-glow blur-[120px]" />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center">
+      <div className="relative z-10 flex flex-col items-center text-center pb-20">
         <div className="animate-fade-in-up mb-16">
           <Image src="/logo.png" alt="Stark Health" width={120} height={120} className="mx-auto" priority />
         </div>
@@ -68,10 +68,9 @@ export default function Home() {
             Already have an account? Sign In
           </Link>
         </div>
-
       </div>
 
-      <footer className="absolute bottom-8 z-10">
+      <footer className="absolute bottom-6 z-10">
         <div className="flex items-center gap-6 text-[10px] tracking-wider text-tm">
           <span>&copy; {new Date().getFullYear()} Stark Health</span>
           <Link href="/privacy" className="transition-colors hover:text-t3">Privacy Policy</Link>
