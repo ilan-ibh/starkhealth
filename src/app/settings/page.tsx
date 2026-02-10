@@ -29,6 +29,7 @@ export default function Settings() {
   const [userEmail, setUserEmail] = useState("");
   const [units, setUnits] = useState("metric");
   const [mcpToken, setMcpToken] = useState<string | null>(null);
+  const [showMcpToken, setShowMcpToken] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -228,24 +229,34 @@ export default function Settings() {
               </div>
             </div>
 
-            {mcpToken && (
-              <div className="mt-4 space-y-3">
-                <div className="rounded-lg bg-page px-3 py-2">
-                  <p className="break-all font-mono text-[11px] text-t3">{mcpToken}</p>
-                </div>
-                <div className="rounded-lg bg-page px-3 py-2">
-                  <p className="text-[10px] font-medium text-t4 uppercase tracking-wider mb-1">MCP Client Config</p>
-                  <pre className="font-mono text-[10px] text-t3 whitespace-pre-wrap">{`{
+            {mcpToken && (() => {
+              const masked = mcpToken.slice(0, 8) + "•".repeat(24) + mcpToken.slice(-4);
+              return (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-2 rounded-lg bg-page px-3 py-2">
+                    <p className="flex-1 break-all font-mono text-[11px] text-t3">{showMcpToken ? mcpToken : masked}</p>
+                    <button onClick={() => setShowMcpToken(!showMcpToken)} className="shrink-0 text-t4 transition-colors hover:text-t2">
+                      {showMcpToken ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8s2.5-4 6-4 6 4 6 4-2.5 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/><path d="M3 13L13 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8s2.5-4 6-4 6 4 6 4-2.5 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.2"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="rounded-lg bg-page px-3 py-2">
+                    <p className="text-[10px] font-medium text-t4 uppercase tracking-wider mb-1">MCP Client Config</p>
+                    <pre className="font-mono text-[10px] text-t3 whitespace-pre-wrap">{`{
   "stark-health": {
     "url": "${typeof window !== "undefined" ? window.location.origin : "https://starkhealth.io"}/api/mcp",
     "headers": {
-      "Authorization": "Bearer ${mcpToken}"
+      "Authorization": "Bearer ${showMcpToken ? mcpToken : "<your-mcp-token>"}"
     }
   }
 }`}</pre>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="mt-4 flex gap-3">
               {!mcpToken ? (
