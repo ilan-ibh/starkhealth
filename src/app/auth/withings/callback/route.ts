@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/settings?error=withings_auth_failed`);
   }
 
-  const redirectUri = `${baseUrl}/auth/withings/callback`;
+  const redirectUri = "https://starkhealth.io/auth/withings/callback";
 
   // Exchange code for tokens
   const tokenRes = await fetch("https://wbsapi.withings.net/v2/oauth2", {
