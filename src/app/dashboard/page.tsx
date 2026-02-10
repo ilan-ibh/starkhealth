@@ -94,18 +94,33 @@ export default function Dashboard() {
           <HealthScore score={score} />
         </div>
 
-        {/* ── WHOOP + Withings Metrics ────────────────────────────────── */}
+        {/* ── Section: Today's Snapshot ─────────────────────────────── */}
+        <div className="flex items-center gap-4">
+          <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Today</h2>
+          <div className="h-px flex-1 bg-edge" />
+        </div>
+
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
           {metrics.map((m, i) => (<MetricCard key={m.label} {...m} delay={i * 80} />))}
         </div>
 
-        {/* ── Recovery & Sleep (how did you recover?) ─────────────────── */}
+        {/* ── Section: Recovery & Sleep ────────────────────────────────── */}
+        <div className="mt-4 flex items-center gap-4">
+          <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Recovery &amp; Sleep</h2>
+          <div className="h-px flex-1 bg-edge" />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <RecoveryChart data={sampleData} />
           <SleepChart data={sampleData} />
         </div>
 
-        {/* ── Body Composition (how is your body changing?) ────────────── */}
+        {/* ── Section: Body & Insights ─────────────────────────────────── */}
+        <div className="mt-4 flex items-center gap-4">
+          <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Body &amp; Insights</h2>
+          <div className="h-px flex-1 bg-edge" />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <BodyChart data={sampleData} />
           <div className="rounded-2xl border border-edge bg-card p-5">
@@ -124,9 +139,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Training — Hevy (how is your training?) ─────────────────── */}
-        <div className="mt-2">
-          <h2 className="mb-4 text-[10px] font-medium tracking-[0.25em] text-t4 uppercase">Training — Hevy</h2>
+        {/* ── Section: Training ────────────────────────────────────────── */}
+        <div className="mt-4 flex items-center gap-4">
+          <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Training</h2>
+          <div className="h-px flex-1 bg-edge" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -154,7 +170,12 @@ export default function Dashboard() {
           <FrequencyChart data={getWorkoutFrequency()} />
         </div>
 
-        {/* ── Personal Records ────────────────────────────────────────── */}
+        {/* ── Section: Personal Records ────────────────────────────────── */}
+        <div className="mt-4 flex items-center gap-4">
+          <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Personal Records</h2>
+          <div className="h-px flex-1 bg-edge" />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <PersonalRecords records={getPersonalRecords()} />
         </div>
