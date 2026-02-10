@@ -14,15 +14,9 @@ export async function GET() {
   const scope = "user.metrics,user.activity";
   const state = user.id;
 
-  // Use URLSearchParams for proper encoding, but set redirect_uri raw
-  const params = new URLSearchParams();
-  params.set("response_type", "code");
-  params.set("client_id", clientId);
-  params.set("redirect_uri", redirectUri);
-  params.set("scope", scope);
-  params.set("state", state);
-
-  const authUrl = `https://account.withings.com/oauth2_user/authorize2?${params.toString()}`;
+  // Build URL with explicit encoding — Withings requires redirect_uri to be encoded
+  // but scope commas should NOT be encoded
+  const authUrl = `https://account.withings.com/oauth2_user/authorize2?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${state}`;
 
   return NextResponse.redirect(authUrl);
 }

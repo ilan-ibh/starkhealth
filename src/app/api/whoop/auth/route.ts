@@ -9,16 +9,13 @@ export async function GET() {
   const clientId = process.env.WHOOP_CLIENT_ID;
   if (!clientId) return NextResponse.json({ error: "WHOOP not configured" }, { status: 500 });
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "https://starkhealth.io"}/whoop/callback`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkhealth.io";
+  const redirectUri = `${baseUrl}/whoop/callback`;
   const scopes = "read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement offline";
-  const state = user.id; // use user id as state for verification
+  const state = user.id;
 
-  const authUrl = new URL("https://api.prod.whoop.com/oauth/oauth2/auth");
-  authUrl.searchParams.set("client_id", clientId);
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("redirect_uri", redirectUri);
-  authUrl.searchParams.set("scope", scopes);
-  authUrl.searchParams.set("state", state);
+  // Build URL manually to avoid URLSearchParams encoding issues with WHOOP's Hydra OAuth
+  const authUrl = `https://api.prod.whoop.com/oauth/oauth2/auth?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
 
-  return NextResponse.redirect(authUrl.toString());
+  return NextResponse.redirect(authUrl);
 }
