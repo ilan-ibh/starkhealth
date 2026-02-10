@@ -38,7 +38,7 @@ npm install
 ### 2. Set up Supabase
 
 1. Create a new project at [supabase.com/dashboard](https://supabase.com/dashboard)
-2. Go to **SQL Editor** and run the contents of [`supabase/schema.sql`](supabase/schema.sql)
+2. Go to **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/migration-002-providers.sql`](supabase/migration-002-providers.sql)
 3. Go to **Project Settings → API** and copy your project URL and anon key
 4. Go to **Authentication → URL Configuration** and set:
    - **Site URL**: `https://your-domain.com` (e.g. `http://localhost:3000` for local dev)
@@ -79,8 +79,13 @@ Open [http://localhost:3000](http://localhost:3000) — sign up, add your Anthro
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Your Supabase anonymous/public key |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Your deployment URL (e.g. `https://starkhealth.io`) |
+| `WHOOP_CLIENT_ID` | For WHOOP | Register at [developer.whoop.com](https://developer.whoop.com) |
+| `WHOOP_CLIENT_SECRET` | For WHOOP | WHOOP OAuth client secret |
+| `WITHINGS_CLIENT_ID` | For Withings | Register at [developer.withings.com](https://developer.withings.com) |
+| `WITHINGS_CLIENT_SECRET` | For Withings | Withings OAuth client secret |
 
-> **Note**: Each user provides their own Anthropic API key through the Settings page. No server-side Anthropic key is needed.
+> **Note**: Each user provides their own Anthropic API key and Hevy API key through the Settings page. No server-side keys are needed for those.
 
 ## Database Schema
 

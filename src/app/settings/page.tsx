@@ -38,12 +38,26 @@ export default function Settings() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserEmail(user.email || "");
+
+      // Load AI settings
       const res = await fetch("/api/settings");
       if (res.ok) {
         const data = await res.json();
         setMaskedKey(data.anthropic_api_key_masked);
         setHasKey(data.has_api_key);
         if (data.ai_model) setAiModel(data.ai_model);
+      }
+
+      // Load provider connection status
+      const healthRes = await fetch("/api/health-data");
+      if (healthRes.ok) {
+        const healthData = await healthRes.json();
+        setConnections((prev) =>
+          prev.map((c) => ({
+            ...c,
+            connected: healthData.providers?.[c.id] ?? false,
+          }))
+        );
       }
     };
     load();
@@ -61,9 +75,30 @@ export default function Settings() {
   const [hevyKeySaved, setHevyKeySaved] = useState(false);
 
   const signOut = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push("/"); router.refresh(); };
-  const toggle = (id: string) => { setConnections((prev) => prev.map((c) => (c.id === id ? { ...c, connected: !c.connected } : c))); };
-  const saveHevyKey = () => {
+
+  const connectProvider = (id: string) => {
+    // OAuth providers redirect to auth endpoint
+    if (id === "whoop") window.location.href = "/api/whoop/auth";
+    else if (id === "withings") window.location.href = "/api/withings/auth";
+  };
+
+  const disconnectProvider = async (id: string) => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("provider_tokens").delete().eq("user_id", user.id).eq("provider", id);
+    setConnections((prev) => prev.map((c) => (c.id === id ? { ...c, connected: false } : c)));
+  };
+
+  const saveHevyKey = async () => {
     if (!hevyKey.trim()) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("provider_tokens").upsert(
+      { user_id: user.id, provider: "hevy", access_token: hevyKey.trim() },
+      { onConflict: "user_id,provider" }
+    );
     setConnections((prev) => prev.map((c) => (c.id === "hevy" ? { ...c, connected: true } : c)));
     setHevyKeySaved(true);
     setHevyKey("");
@@ -169,16 +204,21 @@ export default function Settings() {
                       <p className="mt-0.5 text-[12px] font-light text-t4">{conn.description}</p>
                     </div>
                   </div>
-                  {conn.authType === "oauth" && (
-                    <button onClick={() => toggle(conn.id)} className={`shrink-0 rounded-full px-5 py-2 text-[11px] font-light tracking-wider transition-all ${conn.connected ? "border border-edge text-t3 hover:border-red-500/30 hover:text-red-500" : "bg-btn text-t1 hover:bg-btn-h"}`}>
-                      {conn.connected ? "Disconnect" : "Connect"}
+                  {conn.authType === "oauth" && !conn.connected && (
+                    <button onClick={() => connectProvider(conn.id)} className="shrink-0 rounded-full bg-btn px-5 py-2 text-[11px] font-light tracking-wider text-t1 transition-all hover:bg-btn-h">
+                      Connect
+                    </button>
+                  )}
+                  {conn.authType === "oauth" && conn.connected && (
+                    <button onClick={() => disconnectProvider(conn.id)} className="shrink-0 rounded-full border border-edge px-5 py-2 text-[11px] font-light tracking-wider text-t3 transition-all hover:border-red-500/30 hover:text-red-500">
+                      Disconnect
                     </button>
                   )}
                   {conn.authType === "apikey" && !conn.connected && (
                     <span className="shrink-0 rounded-full border border-edge px-3 py-1.5 text-[10px] font-light tracking-wider text-t4">API Key</span>
                   )}
                   {conn.authType === "apikey" && conn.connected && (
-                    <button onClick={() => toggle(conn.id)} className="shrink-0 rounded-full border border-edge px-5 py-2 text-[11px] font-light tracking-wider text-t3 transition-all hover:border-red-500/30 hover:text-red-500">
+                    <button onClick={() => disconnectProvider(conn.id)} className="shrink-0 rounded-full border border-edge px-5 py-2 text-[11px] font-light tracking-wider text-t3 transition-all hover:border-red-500/30 hover:text-red-500">
                       Disconnect
                     </button>
                   )}
