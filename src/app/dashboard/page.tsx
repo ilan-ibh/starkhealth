@@ -4,17 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { sampleData, getLatest, getDelta, getSparkline, getHealthScore } from "@/lib/sample-data";
+import { getHevySummary, getMuscleLoads, getWeeklyVolume, getWorkoutFrequency, getStrengthProgress, getPersonalRecords, getTrainingScore } from "@/lib/hevy-data";
 import { MetricCard } from "@/components/MetricCard";
 import { HealthScore } from "@/components/HealthScore";
 import { RecoveryChart, BodyChart, SleepChart } from "@/components/Charts";
+import { MuscleMap } from "@/components/MuscleMap";
+import { VolumeChart, FrequencyChart, StrengthChart, PersonalRecords } from "@/components/WorkoutCharts";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const INSIGHTS = [
   { text: "HRV improved 22% over the past 2 weeks — cardiovascular fitness is trending up.", type: "positive" as const },
-  { text: "Recovery scores are 18% higher after nights with 7.5+ hours of sleep.", type: "info" as const },
-  { text: "Body fat decreased 1.3% this month while muscle mass increased 0.7 kg.", type: "positive" as const },
-  { text: "Consider reducing strain on days following poor sleep — recovery drops significantly.", type: "warning" as const },
+  { text: "Recovery drops 18% on days following high-volume leg sessions. Consider lighter accessory work the day after.", type: "warning" as const },
+  { text: "Body fat decreased 1.3% while muscle mass increased 0.7 kg — recomposition is working.", type: "positive" as const },
+  { text: "Your bench press is up 6% this month. Sleep quality on training days correlates with next-day strength output.", type: "info" as const },
+  { text: "Best recovery scores follow nights with 7.5+ hours of sleep AND rest days — prioritize both.", type: "info" as const },
 ];
 
 function greeting() {
@@ -28,7 +32,10 @@ export default function Dashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const latest = getLatest();
-  const score = getHealthScore();
+  const trainingScore = getTrainingScore();
+  const score = getHealthScore(trainingScore);
+  const hevySummary = getHevySummary();
+  const muscleLoads = getMuscleLoads();
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((d) => setHasApiKey(d.has_api_key ?? false)).catch(() => setHasApiKey(false));
@@ -78,6 +85,7 @@ export default function Dashboard() {
 
       {/* Content */}
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 pb-28">
+        {/* Greeting + Score */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extralight tracking-wide text-t1">{greeting()}</h1>
@@ -86,37 +94,76 @@ export default function Dashboard() {
           <HealthScore score={score} />
         </div>
 
+        {/* ── WHOOP + Withings Metrics ────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
           {metrics.map((m, i) => (<MetricCard key={m.label} {...m} delay={i * 80} />))}
         </div>
 
+        {/* ── Hevy Quick Stats ────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Workouts", value: hevySummary.totalWorkouts, sub: "this month" },
+            { label: "Avg / Week", value: hevySummary.avgPerWeek, sub: "sessions" },
+            { label: "Total Volume", value: `${(hevySummary.totalVolume / 1000).toFixed(0)}k`, sub: "kg lifted" },
+            { label: "Avg Duration", value: `${hevySummary.avgDuration}`, sub: "min / session" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-edge bg-card p-4">
+              <p className="text-[9px] font-medium tracking-[0.2em] text-t4 uppercase">{s.label}</p>
+              <p className="mt-1 text-2xl font-extralight text-t1">{s.value}</p>
+              <p className="text-[10px] text-tm">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Recovery & Body Charts ──────────────────────────────────── */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <RecoveryChart data={sampleData} />
           <BodyChart data={sampleData} />
         </div>
 
+        {/* ── Training Section ────────────────────────────────────────── */}
+        <div className="mt-2">
+          <h2 className="mb-4 text-[10px] font-medium tracking-[0.25em] text-t4 uppercase">Training — Hevy</h2>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <StrengthChart data={getStrengthProgress()} />
+          <MuscleMap loads={muscleLoads} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <VolumeChart data={getWeeklyVolume()} />
+          <FrequencyChart data={getWorkoutFrequency()} />
+        </div>
+
+        {/* ── Sleep + PRs + Insights ──────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <SleepChart data={sampleData} />
+          <PersonalRecords records={getPersonalRecords()} />
           <div className="rounded-2xl border border-edge bg-card p-5">
-            <h3 className="mb-4 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">AI Insights</h3>
-            <div className="space-y-3">
+            <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Cross-Source Insights</h3>
+            <p className="mb-3 text-[11px] font-light text-tm">WHOOP + Withings + Hevy combined</p>
+            <div className="space-y-2.5">
               {INSIGHTS.map((ins, i) => (
-                <div key={i} className="flex items-start gap-3 rounded-xl border border-edge bg-page p-3.5">
+                <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
                   <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
                     {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
                   </span>
-                  <p className="text-[12px] leading-relaxed font-light text-t3">{ins.text}</p>
+                  <p className="text-[11px] leading-relaxed font-light text-t3">{ins.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
+        {/* Data Sources */}
         <div className="flex items-center justify-center gap-8 pb-8 pt-4">
           <span className="text-[9px] font-light tracking-[0.15em] text-tm uppercase">Data sources</span>
           <span className="text-[10px] font-medium tracking-[0.2em] text-t4">WHOOP</span>
           <span className="h-3 w-px bg-edge" />
           <span className="text-[10px] font-medium tracking-[0.2em] text-t4">WITHINGS</span>
+          <span className="h-3 w-px bg-edge" />
+          <span className="text-[10px] font-medium tracking-[0.2em] text-t4">HEVY</span>
         </div>
       </div>
 

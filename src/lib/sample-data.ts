@@ -132,13 +132,14 @@ export function getSparkline(
   return sampleData.slice(-days).map((d) => d[key] as number);
 }
 
-export function getHealthScore(): number {
+export function getHealthScore(trainingScore?: number): number {
   const d = getLatest();
-  const rec = d.recovery * 0.3;
-  const slp = d.sleepScore * 0.25;
-  const hrvN = clamp(((d.hrv - 20) / 80) * 100, 0, 100) * 0.25;
-  const body = clamp(75 + (36 - d.bodyFat) * 2, 50, 100) * 0.2;
-  return Math.round(rec + slp + hrvN + body);
+  const rec = d.recovery * 0.25;
+  const slp = d.sleepScore * 0.2;
+  const hrvN = clamp(((d.hrv - 20) / 80) * 100, 0, 100) * 0.2;
+  const body = clamp(75 + (36 - d.bodyFat) * 2, 50, 100) * 0.15;
+  const train = (trainingScore ?? 70) * 0.2;
+  return Math.round(rec + slp + hrvN + body + train);
 }
 
 // ── AI summary ───────────────────────────────────────────────────────────────
@@ -172,5 +173,13 @@ TODAY (${t.date}):
 
 FULL DAILY DATA (JSON):
 ${JSON.stringify(sampleData)}
+
+WORKOUT DATA (from Hevy):
+The user trains 4-5x per week (Push/Pull/Legs/Upper split).
+Key lifts: Bench Press ~82kg, Squat ~104kg, Deadlift ~126kg, OHP ~52kg.
+All lifts show progressive overload over 30 days.
+Total volume: ~150,000+ kg lifted this month.
+Training consistency is good — average 4.5 sessions/week.
+Recent muscle fatigue: chest and quads are most fatigued (trained yesterday), back is recovering, legs were last trained 2 days ago.
 `.trim();
 }

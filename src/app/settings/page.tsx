@@ -13,6 +13,8 @@ const CONNECTIONS: Connection[] = [
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M7 12h2l1.5-3 3 6 1.5-3h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg> },
   { id: "withings", name: "Withings", description: "Weight, body composition, blood pressure & activity", connected: false, color: "#3b82f6", scopes: ["Weight & BMI", "Body composition", "Blood pressure", "Daily activity & steps"],
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg> },
+  { id: "hevy", name: "Hevy", description: "Workout tracking, exercises, sets, reps & strength progression", connected: false, color: "#f97316", scopes: ["Workout history", "Exercise data & sets", "Personal records", "Routines"],
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M8 8v8M16 8v8M6 10h4M14 10h4M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg> },
 ];
 
 export default function Settings() {
