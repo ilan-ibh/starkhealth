@@ -30,7 +30,31 @@ export default function Home() {
           Your health data, unified
         </p>
 
-        <div className="animate-fade-in-up animate-delay-600 mt-20 flex flex-col items-center gap-5">
+        {/* Integration logos */}
+        <div className="animate-fade-in animate-delay-600 mt-14 flex items-center gap-8">
+          <Image
+            src="/logos/whoop.png"
+            alt="WHOOP"
+            width={100}
+            height={28}
+            className="logo-adaptive h-5 w-auto object-contain opacity-35"
+          />
+          <Image
+            src="/logos/withings.png"
+            alt="Withings"
+            width={100}
+            height={28}
+            className="logo-adaptive h-[14px] w-auto object-contain opacity-35"
+          />
+          <span className="text-[14px] font-medium tracking-[0.05em] text-t1 opacity-30">
+            Hevy
+          </span>
+          <span className="text-[12px] font-light tracking-wider text-tm italic">
+            &amp; more
+          </span>
+        </div>
+
+        <div className="animate-fade-in-up animate-delay-600 mt-14 flex flex-col items-center gap-5">
           <Link
             href="/login"
             className="group inline-flex items-center gap-2 rounded-full bg-btn px-8 py-3 text-[12px] font-light tracking-[0.2em] text-t1 uppercase transition-all hover:bg-btn-h"

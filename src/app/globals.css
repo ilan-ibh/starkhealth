@@ -101,6 +101,12 @@ body {
 *::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 2px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
 
+/* ── Dark mode logo invert ──────────────────────────────────────────────── */
+
+.dark .logo-adaptive {
+  filter: invert(1);
+}
+
 /* ── Grain overlay (dark mode only) ─────────────────────────────────────── */
 
 .dark .grain::before {
