@@ -33,6 +33,8 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 
 ![MCP Integration](docs/screenshots/mcp-settings.png)
 
+![Connected Apps](docs/screenshots/connected-apps.png)
+
 ---
 
 ### Supported Integrations
