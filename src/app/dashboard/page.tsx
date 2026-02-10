@@ -182,14 +182,79 @@ function computeTrainingScore(workouts: RawWorkout[]) {
   return Math.min(Math.round(freqScore + progScore), 100);
 }
 
-// ── Insights ─────────────────────────────────────────────────────────────
+// ── Insights (computed from real data) ───────────────────────────────────
 
-const INSIGHTS = [
-  { text: "HRV improved 22% over the past 2 weeks — cardiovascular fitness is trending up.", type: "positive" as const },
-  { text: "Recovery drops 18% on days following high-volume leg sessions. Consider lighter accessory work the day after.", type: "warning" as const },
-  { text: "Body fat decreased 1.3% while muscle mass increased 0.7 kg — recomposition is working.", type: "positive" as const },
-  { text: "Your bench press is up 6% this month. Sleep quality on training days correlates with next-day strength output.", type: "info" as const },
-  { text: "Best recovery scores follow nights with 7.5+ hours of sleep AND rest days — prioritize both.", type: "info" as const },
+interface Insight { text: string; type: "positive" | "warning" | "info" }
+
+function computeInsights(days: DayData[], workouts: RawWorkout[]): Insight[] {
+  if (days.length === 0 && workouts.length === 0) return [];
+
+  const insights: Insight[] = [];
+  const latest = days.length ? days[days.length - 1] : null;
+
+  if (days.length >= 7) {
+    const last7 = days.slice(-7);
+    const prev7 = days.slice(-14, -7);
+
+    // HRV trend
+    if (prev7.length >= 3) {
+      const avgHrvNow = last7.filter(d => d.hrv).reduce((s, d) => s + (d.hrv ?? 0), 0) / last7.filter(d => d.hrv).length;
+      const avgHrvPrev = prev7.filter(d => d.hrv).reduce((s, d) => s + (d.hrv ?? 0), 0) / Math.max(1, prev7.filter(d => d.hrv).length);
+      if (avgHrvPrev > 0) {
+        const change = Math.round(((avgHrvNow - avgHrvPrev) / avgHrvPrev) * 100);
+        if (change > 5) insights.push({ text: `HRV improved ${change}% over the past 2 weeks (${Math.round(avgHrvPrev)}ms → ${Math.round(avgHrvNow)}ms) — cardiovascular fitness is trending up.`, type: "positive" });
+        else if (change < -10) insights.push({ text: `HRV declined ${Math.abs(change)}% over the past 2 weeks (${Math.round(avgHrvPrev)}ms → ${Math.round(avgHrvNow)}ms) — consider prioritizing recovery.`, type: "warning" });
+      }
+    }
+
+    // Sleep & recovery correlation
+    const goodSleep = last7.filter(d => (d.sleepHours ?? 0) >= 7.5);
+    const badSleep = last7.filter(d => (d.sleepHours ?? 0) < 6.5 && d.sleepHours !== null);
+    if (goodSleep.length > 0 && badSleep.length > 0) {
+      const avgRecGood = goodSleep.reduce((s, d) => s + (d.recovery ?? 0), 0) / goodSleep.length;
+      const avgRecBad = badSleep.reduce((s, d) => s + (d.recovery ?? 0), 0) / badSleep.length;
+      if (avgRecGood > avgRecBad + 5) {
+        insights.push({ text: `Recovery averages ${Math.round(avgRecGood)}% after 7.5h+ sleep vs ${Math.round(avgRecBad)}% after <6.5h. Sleep is your biggest recovery lever.`, type: "info" });
+      }
+    }
+
+    // Recovery trend
+    if (latest && latest.recovery !== null) {
+      const avgRec = last7.reduce((s, d) => s + (d.recovery ?? 0), 0) / last7.filter(d => d.recovery).length;
+      if (latest.recovery > avgRec + 10) insights.push({ text: `Today's recovery (${latest.recovery}%) is well above your 7-day average (${Math.round(avgRec)}%) — good day for high intensity.`, type: "positive" });
+      else if (latest.recovery < avgRec - 15) insights.push({ text: `Today's recovery (${latest.recovery}%) is below your 7-day average (${Math.round(avgRec)}%) — consider an active recovery day.`, type: "warning" });
+    }
+  }
+
+  // Body composition
+  if (days.length >= 14) {
+    const first = days[0];
+    if (first.bodyFat !== null && latest && latest.bodyFat !== null) {
+      const bfChange = Math.round((latest.bodyFat - first.bodyFat) * 10) / 10;
+      const mmFirst = first.muscleMass ?? 0;
+      const mmLatest = latest?.muscleMass ?? 0;
+      const mmChange = Math.round((mmLatest - mmFirst) * 10) / 10;
+      if (bfChange < -0.5 && mmChange > 0) insights.push({ text: `Body fat ${bfChange}% and muscle mass +${mmChange}kg over ${days.length} days — recomposition is working.`, type: "positive" });
+      else if (bfChange < -0.5) insights.push({ text: `Body fat decreased ${Math.abs(bfChange)}% over ${days.length} days. Keep it up.`, type: "positive" });
+    }
+  }
+
+  // Training insights
+  if (workouts.length > 0) {
+    const freq = computeFrequency(workouts);
+    const avgFreq = freq.length ? Math.round((freq.reduce((s, w) => s + w.count, 0) / freq.length) * 10) / 10 : 0;
+    if (avgFreq >= 4) insights.push({ text: `Training ${avgFreq}x per week consistently. Solid volume for progression.`, type: "positive" });
+    else if (avgFreq > 0 && avgFreq < 3) insights.push({ text: `Averaging ${avgFreq} workouts per week. Consider adding 1-2 sessions for faster progress.`, type: "info" });
+  }
+
+  return insights.slice(0, 5);
+}
+
+const ONBOARDING_HINTS: Insight[] = [
+  { text: "Connect WHOOP to see recovery, HRV, sleep, and strain insights.", type: "info" },
+  { text: "Connect Withings to track weight, body fat, and body composition trends.", type: "info" },
+  { text: "Connect Hevy to analyze your training volume, strength progression, and muscle fatigue.", type: "info" },
+  { text: "Add your Anthropic API key to unlock the AI health coach.", type: "info" },
 ];
 
 function greeting() {
@@ -353,20 +418,31 @@ export default function Dashboard() {
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <BodyChart data={days as DayData[]} />
-          <div className="rounded-2xl border border-edge bg-card p-5">
-            <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Cross-Source Insights</h3>
-            <p className="mb-3 text-[11px] font-light text-tm">WHOOP + Withings + Hevy combined</p>
-            <div className="space-y-2.5">
-              {INSIGHTS.map((ins, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
-                  <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
-                    {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
-                  </span>
-                  <p className="text-[11px] leading-relaxed font-light text-t3">{ins.text}</p>
+          {(() => {
+            const realInsights = computeInsights(days as DayData[], workouts);
+            const displayInsights = realInsights.length > 0 ? realInsights : ONBOARDING_HINTS;
+            const hasData = realInsights.length > 0;
+            return (
+              <div className="rounded-2xl border border-edge bg-card p-5">
+                <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">
+                  {hasData ? "Cross-Source Insights" : "Get Started"}
+                </h3>
+                <p className="mb-3 text-[11px] font-light text-tm">
+                  {hasData ? "Generated from your WHOOP, Withings & Hevy data" : "Connect your providers to unlock insights"}
+                </p>
+                <div className="space-y-2.5">
+                  {displayInsights.map((ins, i) => (
+                    <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
+                      <span className={`mt-0.5 text-[10px] ${ins.type === "positive" ? "text-emerald-500" : ins.type === "warning" ? "text-amber-500" : "text-blue-500"}`}>
+                        {ins.type === "positive" ? "▲" : ins.type === "warning" ? "●" : "◆"}
+                      </span>
+                      <p className="text-[11px] leading-relaxed font-light text-t3">{ins.text}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Section: Training */}
