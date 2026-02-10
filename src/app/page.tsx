@@ -37,19 +37,19 @@ export default function Home() {
             alt="WHOOP"
             width={120}
             height={34}
-            className="logo-adaptive h-[18px] w-auto object-contain opacity-35"
+            className="logo-adaptive h-[22px] w-auto object-contain opacity-30"
           />
           <Image
             src="/logos/withings.png"
             alt="Withings"
             width={120}
             height={16}
-            className="logo-adaptive h-[15px] w-auto object-contain opacity-35"
+            className="logo-adaptive h-[11px] w-auto object-contain opacity-30"
           />
-          <span className="text-[16px] font-semibold tracking-tight text-t1 opacity-30">
+          <span className="text-[15px] font-bold tracking-tight text-t1 opacity-25">
             hevy
           </span>
-          <span className="text-[12px] font-light tracking-wider text-tm italic">
+          <span className="text-[11px] font-light tracking-wider text-tm italic">
             &amp; more
           </span>
         </div>
