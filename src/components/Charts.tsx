@@ -53,7 +53,9 @@ export function RecoveryChart({ data }: { data: DayData[] }) {
 }
 
 export function BodyChart({ data }: { data: DayData[] }) {
-  const mapped = data.map((d) => ({ ...d, date: fmt(d.date) }));
+  // Only include days that have weight or bodyFat data
+  const withBody = data.filter((d) => d.weight !== null || d.bodyFat !== null);
+  const mapped = (withBody.length > 0 ? withBody : data).map((d) => ({ ...d, date: fmt(d.date) }));
   return (
     <Card title="Body Composition — 30 Days">
       <ResponsiveContainer width="100%" height="100%">
