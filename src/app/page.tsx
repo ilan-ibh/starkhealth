@@ -45,14 +45,16 @@ export default function Home() {
           </Link>
         </div>
 
-        <p className="animate-fade-in animate-delay-800 mt-16 text-xs font-light tracking-wider text-tm">
-          contact@starkhealth.io
-        </p>
       </div>
 
-      <footer className="absolute bottom-8 z-10 flex items-center gap-6 text-[10px] tracking-wider text-tm">
-        <span>&copy; {new Date().getFullYear()} Stark Health</span>
-        <Link href="/privacy" className="transition-colors hover:text-t3">Privacy Policy</Link>
+      <footer className="absolute bottom-8 z-10 flex flex-col items-center gap-3">
+        <p className="text-[11px] font-light tracking-wider text-tm">
+          contact@starkhealth.io
+        </p>
+        <div className="flex items-center gap-6 text-[10px] tracking-wider text-tm">
+          <span>&copy; {new Date().getFullYear()} Stark Health</span>
+          <Link href="/privacy" className="transition-colors hover:text-t3">Privacy Policy</Link>
+        </div>
       </footer>
     </main>
   );
