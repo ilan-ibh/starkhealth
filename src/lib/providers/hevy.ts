@@ -10,6 +10,7 @@ export interface HevySet {
 export interface HevyExercise {
   name: string;
   muscle_group: string;
+  secondary_muscles: string[];
   sets: HevySet[];
 }
 
@@ -21,13 +22,72 @@ export interface HevyWorkout {
   exercises: HevyExercise[];
 }
 
+// Hevy muscle names → our body map names
+const MUSCLE_NAME_MAP: Record<string, string> = {
+  abdominals: "core",
+  adductors: "quads",
+  biceps: "biceps",
+  calves: "calves",
+  cardio: "core",
+  chest: "chest",
+  forearms: "forearms",
+  full_body: "core",
+  glutes: "glutes",
+  hamstrings: "hamstrings",
+  lats: "back",
+  lower_back: "back",
+  quadriceps: "quads",
+  shoulders: "shoulders",
+  traps: "traps",
+  triceps: "triceps",
+  upper_back: "back",
+  other: "core",
+};
+
+function mapMuscle(hevyName: string): string {
+  return MUSCLE_NAME_MAP[hevyName] || "core";
+}
+
+// Fetch all exercise templates to build muscle group mapping
+async function fetchExerciseTemplates(apiKey: string): Promise<Record<string, { primary: string; secondary: string[] }>> {
+  const templateMap: Record<string, { primary: string; secondary: string[] }> = {};
+  let page = 1;
+
+  while (page <= 20) {
+    const res = await fetch(`${API}/v1/exercise_templates?page=${page}&pageSize=100`, {
+      headers: { "api-key": apiKey },
+    });
+
+    if (!res.ok) break;
+    const data = await res.json();
+    const templates = data.exercise_templates || [];
+
+    if (templates.length === 0) break;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const t of templates as any[]) {
+      templateMap[t.id] = {
+        primary: mapMuscle(t.primary_muscle_group || "other"),
+        secondary: (t.secondary_muscle_groups || []).map((m: string) => mapMuscle(m)),
+      };
+    }
+
+    if (page >= (data.page_count || 1)) break;
+    page++;
+  }
+
+  return templateMap;
+}
+
 export async function fetchHevyData(apiKey: string): Promise<HevyWorkout[]> {
+  // Fetch exercise templates first for muscle group mapping
+  const templateMap = await fetchExerciseTemplates(apiKey);
+
   const allWorkouts: HevyWorkout[] = [];
   let page = 1;
   const pageSize = 10;
 
-  // Fetch up to 3 pages (30 workouts)
-  while (page <= 3) {
+  while (page <= 5) {
     const res = await fetch(`${API}/v1/workouts?page=${page}&pageSize=${pageSize}`, {
       headers: { "api-key": apiKey },
     });
@@ -51,17 +111,24 @@ export async function fetchHevyData(apiKey: string): Promise<HevyWorkout[]> {
         : 0;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const exercises: HevyExercise[] = (w.exercises || []).map((ex: any) => ({
-        name: ex.title || ex.exercise_template_id || "Unknown",
-        muscle_group: ex.muscle_group || "other",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        sets: (ex.sets || []).map((s: any) => ({
-          weight_kg: s.weight_kg || 0,
-          reps: s.reps || 0,
-          rpe: s.rpe || null,
-          type: s.set_type === "warmup" ? "warmup" as const : "normal" as const,
-        })),
-      }));
+      const exercises: HevyExercise[] = (w.exercises || []).map((ex: any) => {
+        // Look up muscle groups from exercise template
+        const templateId = ex.exercise_template_id;
+        const muscles = templateMap[templateId] || { primary: "core", secondary: [] };
+
+        return {
+          name: ex.title || "Unknown",
+          muscle_group: muscles.primary,
+          secondary_muscles: muscles.secondary,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          sets: (ex.sets || []).map((s: any) => ({
+            weight_kg: s.weight_kg || 0,
+            reps: s.reps || 0,
+            rpe: s.rpe || null,
+            type: s.type === "warmup" ? "warmup" as const : "normal" as const,
+          })),
+        };
+      });
 
       allWorkouts.push({
         id: w.id,
@@ -72,7 +139,7 @@ export async function fetchHevyData(apiKey: string): Promise<HevyWorkout[]> {
       });
     }
 
-    if (workouts.length < pageSize) break;
+    if (page >= (data.page_count || 1)) break;
     page++;
   }
 

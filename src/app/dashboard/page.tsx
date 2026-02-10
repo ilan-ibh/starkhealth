@@ -50,7 +50,7 @@ function computeHealthScore(days: DayData[], trainingScore: number) {
 
 interface RawWorkout {
   id: string; date: string; title: string; duration_min: number;
-  exercises: { name: string; muscle_group: string; sets: { weight_kg: number; reps: number; rpe: number | null; type: string }[] }[];
+  exercises: { name: string; muscle_group: string; secondary_muscles?: string[]; sets: { weight_kg: number; reps: number; rpe: number | null; type: string }[] }[];
 }
 
 function computeHevySummary(workouts: RawWorkout[]) {
@@ -135,11 +135,30 @@ function computeMuscleLoads(workouts: RawWorkout[]) {
   const recent = workouts.slice(-8);
   for (const w of recent) {
     for (const ex of w.exercises) {
-      const muscle = MUSCLE_MAP[ex.muscle_group] || "core";
+      // Primary muscle
+      const primary = MUSCLE_MAP[ex.muscle_group] || ex.muscle_group || "core";
+      const primaryMapped = allMuscles.includes(primary as MuscleGroup) ? primary : "core";
       for (const s of ex.sets) {
-        if (s.type !== "warmup") { loads[muscle].sets++; loads[muscle].volume += s.weight_kg * s.reps; }
+        if (s.type !== "warmup") {
+          loads[primaryMapped].sets++;
+          loads[primaryMapped].volume += s.weight_kg * s.reps;
+        }
       }
-      if (!loads[muscle].lastWorked || w.date > loads[muscle].lastWorked) loads[muscle].lastWorked = w.date;
+      if (!loads[primaryMapped].lastWorked || w.date > loads[primaryMapped].lastWorked) loads[primaryMapped].lastWorked = w.date;
+
+      // Secondary muscles
+      const secondaries = ex.secondary_muscles || [];
+      for (const sec of secondaries) {
+        const secMapped = MUSCLE_MAP[sec] || sec || "core";
+        const secFinal = allMuscles.includes(secMapped as MuscleGroup) ? secMapped : "core";
+        for (const s of ex.sets) {
+          if (s.type !== "warmup") {
+            loads[secFinal].sets += 0.5; // secondary gets half credit
+            loads[secFinal].volume += (s.weight_kg * s.reps) * 0.4;
+          }
+        }
+        if (!loads[secFinal].lastWorked || w.date > loads[secFinal].lastWorked) loads[secFinal].lastWorked = w.date;
+      }
     }
   }
 
