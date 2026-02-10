@@ -22,9 +22,9 @@ export default function Login() {
     setLoading(true);
     const supabase = createClient();
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) setError(error.message);
-      else setSuccess("Check your email to confirm your account.");
+      else { router.push("/dashboard"); router.refresh(); }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
