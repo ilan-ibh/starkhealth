@@ -7,13 +7,13 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-interface Connection { id: string; name: string; description: string; connected: boolean; icon: React.ReactNode; color: string; scopes: string[]; }
+interface Connection { id: string; name: string; description: string; connected: boolean; authType: "oauth" | "apikey"; icon: React.ReactNode; color: string; scopes: string[]; keyHint?: string; keyUrl?: string; }
 const CONNECTIONS: Connection[] = [
-  { id: "whoop", name: "WHOOP", description: "Recovery, HRV, sleep, strain & workout data", connected: false, color: "#22c55e", scopes: ["Recovery metrics", "Sleep data & stages", "Strain & workouts", "Heart rate & HRV"],
+  { id: "whoop", name: "WHOOP", description: "Recovery, HRV, sleep, strain & workout data", connected: false, authType: "oauth", color: "#22c55e", scopes: ["Recovery metrics", "Sleep data & stages", "Strain & workouts", "Heart rate & HRV"],
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M7 12h2l1.5-3 3 6 1.5-3h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg> },
-  { id: "withings", name: "Withings", description: "Weight, body composition, blood pressure & activity", connected: false, color: "#3b82f6", scopes: ["Weight & BMI", "Body composition", "Blood pressure", "Daily activity & steps"],
+  { id: "withings", name: "Withings", description: "Weight, body composition, blood pressure & activity", connected: false, authType: "oauth", color: "#3b82f6", scopes: ["Weight & BMI", "Body composition", "Blood pressure", "Daily activity & steps"],
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg> },
-  { id: "hevy", name: "Hevy", description: "Workout tracking, exercises, sets, reps & strength progression", connected: false, color: "#f97316", scopes: ["Workout history", "Exercise data & sets", "Personal records", "Routines"],
+  { id: "hevy", name: "Hevy", description: "Workout tracking, exercises, sets, reps & strength progression", connected: false, authType: "apikey", color: "#f97316", scopes: ["Workout history", "Exercise data & sets", "Personal records", "Routines"], keyHint: "Hevy Pro API key", keyUrl: "https://hevy.com/settings?developer",
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" /><path d="M8 8v8M16 8v8M6 10h4M14 10h4M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg> },
 ];
 
@@ -57,8 +57,18 @@ export default function Settings() {
     setSaving(false);
   };
 
+  const [hevyKey, setHevyKey] = useState("");
+  const [hevyKeySaved, setHevyKeySaved] = useState(false);
+
   const signOut = async () => { const supabase = createClient(); await supabase.auth.signOut(); router.push("/"); router.refresh(); };
   const toggle = (id: string) => { setConnections((prev) => prev.map((c) => (c.id === id ? { ...c, connected: !c.connected } : c))); };
+  const saveHevyKey = () => {
+    if (!hevyKey.trim()) return;
+    setConnections((prev) => prev.map((c) => (c.id === "hevy" ? { ...c, connected: true } : c)));
+    setHevyKeySaved(true);
+    setHevyKey("");
+    setTimeout(() => setHevyKeySaved(false), 3000);
+  };
 
   return (
     <div className="min-h-screen bg-page">
@@ -159,14 +169,52 @@ export default function Settings() {
                       <p className="mt-0.5 text-[12px] font-light text-t4">{conn.description}</p>
                     </div>
                   </div>
-                  <button onClick={() => toggle(conn.id)} className={`shrink-0 rounded-full px-5 py-2 text-[11px] font-light tracking-wider transition-all ${conn.connected ? "border border-edge text-t3 hover:border-red-500/30 hover:text-red-500" : "bg-btn text-t1 hover:bg-btn-h"}`}>
-                    {conn.connected ? "Disconnect" : "Connect"}
-                  </button>
+                  {conn.authType === "oauth" && (
+                    <button onClick={() => toggle(conn.id)} className={`shrink-0 rounded-full px-5 py-2 text-[11px] font-light tracking-wider transition-all ${conn.connected ? "border border-edge text-t3 hover:border-red-500/30 hover:text-red-500" : "bg-btn text-t1 hover:bg-btn-h"}`}>
+                      {conn.connected ? "Disconnect" : "Connect"}
+                    </button>
+                  )}
+                  {conn.authType === "apikey" && !conn.connected && (
+                    <span className="shrink-0 rounded-full border border-edge px-3 py-1.5 text-[10px] font-light tracking-wider text-t4">API Key</span>
+                  )}
+                  {conn.authType === "apikey" && conn.connected && (
+                    <button onClick={() => toggle(conn.id)} className="shrink-0 rounded-full border border-edge px-5 py-2 text-[11px] font-light tracking-wider text-t3 transition-all hover:border-red-500/30 hover:text-red-500">
+                      Disconnect
+                    </button>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? "bg-emerald-500" : "bg-tm"}`} />
                   <span className={`text-[11px] font-light ${conn.connected ? "text-emerald-600 dark:text-emerald-400" : "text-t4"}`}>{conn.connected ? "Connected" : "Not connected"}</span>
                 </div>
+
+                {/* API Key input for Hevy */}
+                {conn.authType === "apikey" && !conn.connected && (
+                  <div className="mt-4 border-t border-edge pt-4">
+                    <p className="text-[11px] font-light text-t4">
+                      Get your API key at{" "}
+                      <a href={conn.keyUrl} target="_blank" rel="noopener noreferrer" className="text-t3 underline underline-offset-4 hover:text-t2">{conn.keyUrl?.replace("https://", "")}</a>
+                    </p>
+                    <p className="mt-1 text-[10px] text-tm">Requires Hevy Pro subscription</p>
+                    <div className="mt-3 flex gap-3">
+                      <input
+                        type="password"
+                        value={hevyKey}
+                        onChange={(e) => setHevyKey(e.target.value)}
+                        placeholder={conn.keyHint || "Enter API key..."}
+                        className="flex-1 rounded-xl border border-edge bg-page px-4 py-2.5 font-mono text-sm font-light text-t1 placeholder-tm outline-none transition-colors focus:border-edge-h"
+                      />
+                      <button
+                        onClick={saveHevyKey}
+                        disabled={!hevyKey.trim()}
+                        className="shrink-0 rounded-xl bg-btn px-5 py-2.5 text-[12px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h disabled:opacity-30"
+                      >
+                        {hevyKeySaved ? "Saved" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-4 border-t border-edge pt-4">
                   <p className="text-[9px] font-medium tracking-[0.2em] text-tm uppercase">Data access</p>
                   <div className="mt-2.5 flex flex-wrap gap-2">
