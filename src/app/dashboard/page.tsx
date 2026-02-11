@@ -305,19 +305,27 @@ export default function Dashboard() {
     });
   }, []);
 
-  const latest = useMemo(() => days.length ? getLatest(days) : null, [days]);
   const trainingScore = useMemo(() => computeTrainingScore(workouts), [workouts]);
   const { score, hasEnoughData } = useMemo(() => computeHealthScore(days, trainingScore), [days, trainingScore]);
   const hevySummary = useMemo(() => computeHevySummary(workouts), [workouts]);
   const muscleLoads = useMemo(() => computeMuscleLoads(workouts), [workouts]);
 
-  const metrics = latest ? [
-    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: num(latest.recovery) ?? 0, unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
-    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: num(latest.hrv) ?? 0, unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
-    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: num(latest.sleepHours) ?? 0, unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
-    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: num(latest.strain) ?? 0, unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
-    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: num(latest.weight) ?? 0, unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
-    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: num(latest.bodyFat) ?? 0, unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
+  // Find most recent non-null value for each metric (handles mixed data sources)
+  const findLatest = (key: keyof Omit<DayData, "date">): number => {
+    for (let i = days.length - 1; i >= 0; i--) {
+      const v = num(days[i][key]);
+      if (v !== null) return v;
+    }
+    return 0;
+  };
+
+  const metrics = days.length > 0 ? [
+    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: findLatest("recovery"), unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
+    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: findLatest("hrv"), unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
+    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: findLatest("sleepHours"), unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
+    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: findLatest("strain"), unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
+    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: findLatest("weight"), unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
+    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: findLatest("bodyFat"), unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
   ] : [];
 
   if (loading) {
