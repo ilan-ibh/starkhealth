@@ -319,6 +319,7 @@ export default function Dashboard() {
   const [days, setDays] = useState<DayData[]>([]);
   const [workouts, setWorkouts] = useState<RawWorkout[]>([]);
   const [providers, setProviders] = useState<Record<string, boolean>>({});
+  const [providerErrors, setProviderErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
@@ -332,6 +333,7 @@ export default function Dashboard() {
         setDays(health.days || []);
         setWorkouts(health.workouts || []);
         setProviders(health.providers || {});
+        if (health.errors) setProviderErrors(health.errors);
       }
       setLoading(false);
     });
@@ -398,6 +400,18 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Provider Error Banner */}
+      {Object.keys(providerErrors).length > 0 && (
+        <div className="border-b border-red-500/10 bg-red-500/[0.04] px-6 py-3">
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
+            <p className="text-[12px] font-light text-red-600 dark:text-red-400/80">
+              {Object.entries(providerErrors).map(([p, msg]) => `${p.toUpperCase()}: ${msg}`).join(" · ")}
+            </p>
+            <Link href="/settings" className="shrink-0 rounded-full bg-red-500/10 px-4 py-1.5 text-[11px] font-light tracking-wider text-red-600 dark:text-red-400/80 transition-all hover:bg-red-500/20">Reconnect</Link>
+          </div>
+        </div>
+      )}
 
       {/* API Key Banner */}
       {!loading && hasApiKey === false && (

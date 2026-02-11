@@ -75,15 +75,16 @@ export async function GET() {
   }
 
   // ── Fetch fresh data ───────────────────────────────────────────────────
+  const errors: Record<string, string> = {};
   const [whoopData, withingsData, hevyData] = await Promise.all([
     providers.whoop
-      ? fetchWhoopData(supabase, user.id, tokenMap.whoop).catch((e) => { console.error("WHOOP fetch error:", e); return null; })
+      ? fetchWhoopData(supabase, user.id, tokenMap.whoop).catch((e) => { errors.whoop = (e as Error).message; return null; })
       : null,
     providers.withings
-      ? fetchWithingsData(supabase, user.id, tokenMap.withings).catch((e) => { console.error("Withings fetch error:", e); return null; })
+      ? fetchWithingsData(supabase, user.id, tokenMap.withings).catch((e) => { errors.withings = (e as Error).message; return null; })
       : null,
     providers.hevy
-      ? fetchHevyData(tokenMap.hevy.access_token).catch((e) => { console.error("Hevy fetch error:", e); return null; })
+      ? fetchHevyData(tokenMap.hevy.access_token).catch((e) => { errors.hevy = (e as Error).message; return null; })
       : null,
   ]);
 
@@ -145,6 +146,7 @@ export async function GET() {
     providers,
     days,
     workouts: workouts || [],
+    errors: Object.keys(errors).length > 0 ? errors : undefined,
     cached: false,
   });
 }

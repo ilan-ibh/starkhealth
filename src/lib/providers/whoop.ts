@@ -25,8 +25,7 @@ async function refreshTokenIfNeeded(
   });
 
   if (!res.ok) {
-    console.error("WHOOP token refresh failed");
-    return token.access_token;
+    throw new Error("WHOOP token expired — reconnect in Settings");
   }
 
   const data = await res.json();
