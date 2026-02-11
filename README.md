@@ -317,6 +317,13 @@ A composite score (0-100) weighted across five dimensions:
 | Body Composition | 15% | Withings body fat trend |
 | Training Consistency | 20% | Hevy workout frequency + progressive overload |
 
+**Smart data handling:**
+- Only data from the last **48 hours** counts toward the score — stale metrics are excluded automatically
+- Weights redistribute proportionally when a metric is unavailable (e.g., if no body fat data, the other factors share its 15%)
+- Requires at least 2 fresh metrics to display a score — otherwise shows "Not enough data"
+- Each metric card shows a **recency label** (today / yesterday / 2d ago) so you always know how fresh the data is
+- Delta comparisons use the two most recent non-null values, not just consecutive days
+
 ### AI Coach
 
 The AI assistant uses a detailed system prompt designed to act as a longevity and performance coach (not a generic chatbot). It:

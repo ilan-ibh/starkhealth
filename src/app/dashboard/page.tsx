@@ -26,14 +26,42 @@ function num(v: unknown): number | null {
 
 function getLatest(days: DayData[]) { return days[days.length - 1]; }
 
+// Find most recent non-null value + its date
+function findLatestMetric(days: DayData[], key: keyof Omit<DayData, "date">): { value: number; date: string } | null {
+  for (let i = days.length - 1; i >= 0; i--) {
+    const v = num(days[i][key]);
+    if (v !== null) return { value: v, date: days[i].date };
+  }
+  return null;
+}
+
+// Compute delta between two most recent non-null values
 function getDelta(days: DayData[], key: keyof Omit<DayData, "date">) {
-  if (days.length < 2) return { delta: 0, positive: true };
-  const today = num(days[days.length - 1][key]);
-  const yesterday = num(days[days.length - 2][key]);
-  if (today === null || yesterday === null) return { delta: 0, positive: true };
-  const delta = r1(today - yesterday);
+  let found = 0;
+  let current: number | null = null;
+  let previous: number | null = null;
+  for (let i = days.length - 1; i >= 0; i--) {
+    const v = num(days[i][key]);
+    if (v !== null) {
+      if (found === 0) { current = v; found++; }
+      else if (found === 1) { previous = v; found++; break; }
+    }
+  }
+  if (current === null || previous === null) return { delta: 0, positive: true };
+  const delta = r1(current - previous);
   const lowerBetter = ["rhr", "bodyFat", "weight", "awake"];
   return { delta, positive: lowerBetter.includes(key) ? delta <= 0 : delta >= 0 };
+}
+
+// Human-readable recency label
+function recencyLabel(dateStr: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const date = new Date(dateStr); date.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000);
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays <= 7) return `${diffDays}d ago`;
+  return `${Math.round(diffDays / 7)}w ago`;
 }
 
 function getSparkline(days: DayData[], key: keyof Omit<DayData, "date">, n = 7) {
@@ -45,40 +73,44 @@ function getSparkline(days: DayData[], key: keyof Omit<DayData, "date">, n = 7) 
 function computeHealthScore(days: DayData[], trainingScore: number): { score: number; hasEnoughData: boolean } {
   if (days.length === 0) return { score: 0, hasEnoughData: false };
 
-  // Find most recent non-null value for each metric
-  const findLatest = (key: keyof Omit<DayData, "date">): number | null => {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const cutoff48h = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+  // Find most recent non-null value within 48h
+  const findFresh = (key: keyof Omit<DayData, "date">): number | null => {
     for (let i = days.length - 1; i >= 0; i--) {
       const v = num(days[i][key]);
-      if (v !== null) return v;
+      if (v !== null) {
+        const date = new Date(days[i].date);
+        if (date >= cutoff48h) return v;
+        return null; // too old
+      }
     }
     return null;
   };
 
-  const recovery = findLatest("recovery");
-  const sleepScore = findLatest("sleepScore");
-  const hrv = findLatest("hrv");
-  const bodyFat = findLatest("bodyFat");
+  const recovery = findFresh("recovery");
+  const sleepScore = findFresh("sleepScore");
+  const hrv = findFresh("hrv");
+  const bodyFat = findFresh("bodyFat");
 
-  // Count how many metrics we actually have
   const available = [recovery, sleepScore, hrv, bodyFat].filter((v) => v !== null).length;
-  const hasEnoughData = available >= 2; // need at least 2 real metrics
+  const hasEnoughData = available >= 2;
 
   if (!hasEnoughData) return { score: 0, hasEnoughData: false };
 
-  // Only score metrics we have — redistribute weights proportionally
-  interface Factor { value: number; maxScore: number }
+  // Only score fresh metrics — redistribute weights proportionally
+  interface Factor { value: number; weight: number }
   const factors: Factor[] = [];
 
-  if (recovery !== null) factors.push({ value: clamp(recovery, 0, 100), maxScore: 25 });
-  if (sleepScore !== null) factors.push({ value: clamp(sleepScore, 0, 100), maxScore: 20 });
-  if (hrv !== null) factors.push({ value: clamp(((hrv - 20) / 80) * 100, 0, 100), maxScore: 20 });
-  if (bodyFat !== null) factors.push({ value: clamp(75 + (36 - bodyFat) * 2, 50, 100), maxScore: 15 });
-  // Training always counted
-  factors.push({ value: clamp(trainingScore, 0, 100), maxScore: 20 });
+  if (recovery !== null) factors.push({ value: clamp(recovery, 0, 100), weight: 25 });
+  if (sleepScore !== null) factors.push({ value: clamp(sleepScore, 0, 100), weight: 20 });
+  if (hrv !== null) factors.push({ value: clamp(((hrv - 20) / 80) * 100, 0, 100), weight: 20 });
+  if (bodyFat !== null) factors.push({ value: clamp(75 + (36 - bodyFat) * 2, 50, 100), weight: 15 });
+  factors.push({ value: clamp(trainingScore, 0, 100), weight: 20 });
 
-  // Redistribute: scale so total weights = 100
-  const totalWeight = factors.reduce((s, f) => s + f.maxScore, 0);
-  const score = factors.reduce((s, f) => s + (f.value * (f.maxScore / totalWeight)), 0);
+  const totalWeight = factors.reduce((s, f) => s + f.weight, 0);
+  const score = factors.reduce((s, f) => s + (f.value * (f.weight / totalWeight)), 0);
 
   return { score: Math.round(score), hasEnoughData: true };
 }
@@ -310,22 +342,27 @@ export default function Dashboard() {
   const hevySummary = useMemo(() => computeHevySummary(workouts), [workouts]);
   const muscleLoads = useMemo(() => computeMuscleLoads(workouts), [workouts]);
 
-  // Find most recent non-null value for each metric (handles mixed data sources)
-  const findLatest = (key: keyof Omit<DayData, "date">): number => {
-    for (let i = days.length - 1; i >= 0; i--) {
-      const v = num(days[i][key]);
-      if (v !== null) return v;
-    }
-    return 0;
+  const buildMetric = (label: string, key: keyof Omit<DayData, "date">, unit: string, color: string, sparkDays = 7) => {
+    const found = findLatestMetric(days, key);
+    return {
+      label,
+      dataKey: key,
+      value: found?.value ?? 0,
+      unit,
+      recency: found ? recencyLabel(found.date) : "",
+      ...getDelta(days, key),
+      sparkline: getSparkline(days, key, sparkDays),
+      color,
+    };
   };
 
   const metrics = days.length > 0 ? [
-    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: findLatest("recovery"), unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
-    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: findLatest("hrv"), unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
-    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: findLatest("sleepHours"), unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
-    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: findLatest("strain"), unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
-    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: findLatest("weight"), unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
-    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: findLatest("bodyFat"), unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
+    buildMetric("Recovery", "recovery", "%", "#22c55e"),
+    buildMetric("HRV", "hrv", "ms", "#3b82f6"),
+    buildMetric("Sleep", "sleepHours", "h", "#a855f7"),
+    buildMetric("Strain", "strain", "", "#f97316"),
+    buildMetric("Weight", "weight", "kg", "#06b6d4", 30),
+    buildMetric("Body Fat", "bodyFat", "%", "#ec4899", 30),
   ] : [];
 
   if (loading) {
