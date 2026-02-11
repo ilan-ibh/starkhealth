@@ -37,11 +37,25 @@ function getSparkline(days: DayData[], key: keyof Omit<DayData, "date">, n = 7) 
 
 function computeHealthScore(days: DayData[], trainingScore: number) {
   if (days.length === 0) return 0;
-  const d = days[days.length - 1];
-  const rec = (d.recovery ?? 0) * 0.25;
-  const slp = (d.sleepScore ?? 0) * 0.2;
-  const hrvN = clamp((((d.hrv ?? 0) - 20) / 80) * 100, 0, 100) * 0.2;
-  const body = clamp(75 + (36 - (d.bodyFat ?? 20)) * 2, 50, 100) * 0.15;
+
+  // Use most recent non-null value for each metric (not just the last day)
+  const latest = (key: keyof Omit<DayData, "date">): number | null => {
+    for (let i = days.length - 1; i >= 0; i--) {
+      const v = days[i][key];
+      if (v !== null && v !== undefined) return v as number;
+    }
+    return null;
+  };
+
+  const recovery = latest("recovery");
+  const sleepScore = latest("sleepScore");
+  const hrv = latest("hrv");
+  const bodyFat = latest("bodyFat");
+
+  const rec = (recovery ?? 50) * 0.25;
+  const slp = (sleepScore ?? 50) * 0.2;
+  const hrvN = clamp((((hrv ?? 50) - 20) / 80) * 100, 0, 100) * 0.2;
+  const body = clamp(75 + (36 - (bodyFat ?? 20)) * 2, 50, 100) * 0.15;
   const train = trainingScore * 0.2;
   return Math.round(rec + slp + hrvN + body + train);
 }
