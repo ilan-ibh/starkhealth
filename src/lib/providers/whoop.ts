@@ -7,11 +7,13 @@ async function refreshTokenIfNeeded(
   userId: string,
   token: { access_token: string; refresh_token: string | null; expires_at: string | null }
 ) {
-  if (!token.expires_at || new Date(token.expires_at) > new Date(Date.now() + 60000)) {
+  // Proactively refresh if token expires within 30 minutes
+  const REFRESH_BUFFER_MS = 30 * 60 * 1000;
+  if (!token.expires_at || new Date(token.expires_at) > new Date(Date.now() + REFRESH_BUFFER_MS)) {
     return token.access_token;
   }
 
-  if (!token.refresh_token) return token.access_token;
+  if (!token.refresh_token) throw new Error("WHOOP token expired and no refresh token — reconnect in Settings");
 
   const res = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
     method: "POST",
