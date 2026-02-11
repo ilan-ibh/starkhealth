@@ -53,18 +53,19 @@ export async function GET() {
       .select("workout_id, data, synced_at")
       .eq("user_id", user.id);
 
-    // Check if cache is fresh (any row synced within TTL)
+    // Check if cache is fresh — use the MOST RECENT synced_at across all rows
     const now = Date.now();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const isFresh = cachedDays && cachedDays.length > 0 && cachedDays.some((r: any) =>
-      now - new Date(r.synced_at).getTime() < CACHE_TTL_MS
-    );
+    const latestSync = cachedDays && cachedDays.length > 0
+      ? Math.max(...cachedDays.map((r: any) => new Date(r.synced_at).getTime()))
+      : 0;
+    const isFresh = latestSync > 0 && (now - latestSync) < CACHE_TTL_MS;
 
     if (isFresh) {
       return NextResponse.json({
         providers,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        days: cachedDays.map((r: any) => r.data),
+        days: (cachedDays || []).map((r: any) => r.data),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         workouts: (cachedWorkouts || []).map((r: any) => r.data),
         usingMock: { whoop: false, withings: false, hevy: false },
