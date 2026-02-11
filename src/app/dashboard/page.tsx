@@ -14,53 +14,76 @@ import { VolumeChart, FrequencyChart, StrengthChart, PersonalRecords as PRList }
 import { ChatPanel } from "@/components/ChatPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-// ── Utility functions (work on fetched data) ─────────────────────────────
+// ── Utility functions ────────────────────────────────────────────────────
 
 function r1(v: number) { return Math.round(v * 10) / 10; }
 function clamp(v: number, lo: number, hi: number) { return Math.min(Math.max(v, lo), hi); }
+function num(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === "string" ? parseFloat(v) : Number(v);
+  return isNaN(n) ? null : n;
+}
 
 function getLatest(days: DayData[]) { return days[days.length - 1]; }
 
 function getDelta(days: DayData[], key: keyof Omit<DayData, "date">) {
   if (days.length < 2) return { delta: 0, positive: true };
-  const today = days[days.length - 1][key] as number;
-  const yesterday = days[days.length - 2][key] as number;
-  if (today == null || yesterday == null) return { delta: 0, positive: true };
+  const today = num(days[days.length - 1][key]);
+  const yesterday = num(days[days.length - 2][key]);
+  if (today === null || yesterday === null) return { delta: 0, positive: true };
   const delta = r1(today - yesterday);
   const lowerBetter = ["rhr", "bodyFat", "weight", "awake"];
   return { delta, positive: lowerBetter.includes(key) ? delta <= 0 : delta >= 0 };
 }
 
 function getSparkline(days: DayData[], key: keyof Omit<DayData, "date">, n = 7) {
-  return days.slice(-n).map((d) => (d[key] as number) ?? 0);
+  return days.slice(-n).map((d) => num(d[key]) ?? 0);
 }
 
-function computeHealthScore(days: DayData[], trainingScore: number) {
-  if (days.length === 0) return 0;
+// ── Stark Health Score ───────────────────────────────────────────────────
 
-  // Use most recent non-null value for each metric (not just the last day)
-  const latest = (key: keyof Omit<DayData, "date">): number | null => {
+function computeHealthScore(days: DayData[], trainingScore: number): { score: number; hasEnoughData: boolean } {
+  if (days.length === 0) return { score: 0, hasEnoughData: false };
+
+  // Find most recent non-null value for each metric
+  const findLatest = (key: keyof Omit<DayData, "date">): number | null => {
     for (let i = days.length - 1; i >= 0; i--) {
-      const v = days[i][key];
-      if (v !== null && v !== undefined) return v as number;
+      const v = num(days[i][key]);
+      if (v !== null) return v;
     }
     return null;
   };
 
-  const recovery = latest("recovery");
-  const sleepScore = latest("sleepScore");
-  const hrv = latest("hrv");
-  const bodyFat = latest("bodyFat");
+  const recovery = findLatest("recovery");
+  const sleepScore = findLatest("sleepScore");
+  const hrv = findLatest("hrv");
+  const bodyFat = findLatest("bodyFat");
 
-  const rec = (recovery ?? 50) * 0.25;
-  const slp = (sleepScore ?? 50) * 0.2;
-  const hrvN = clamp((((hrv ?? 50) - 20) / 80) * 100, 0, 100) * 0.2;
-  const body = clamp(75 + (36 - (bodyFat ?? 20)) * 2, 50, 100) * 0.15;
-  const train = trainingScore * 0.2;
-  return Math.round(rec + slp + hrvN + body + train);
+  // Count how many metrics we actually have
+  const available = [recovery, sleepScore, hrv, bodyFat].filter((v) => v !== null).length;
+  const hasEnoughData = available >= 2; // need at least 2 real metrics
+
+  if (!hasEnoughData) return { score: 0, hasEnoughData: false };
+
+  // Only score metrics we have — redistribute weights proportionally
+  interface Factor { value: number; maxScore: number }
+  const factors: Factor[] = [];
+
+  if (recovery !== null) factors.push({ value: clamp(recovery, 0, 100), maxScore: 25 });
+  if (sleepScore !== null) factors.push({ value: clamp(sleepScore, 0, 100), maxScore: 20 });
+  if (hrv !== null) factors.push({ value: clamp(((hrv - 20) / 80) * 100, 0, 100), maxScore: 20 });
+  if (bodyFat !== null) factors.push({ value: clamp(75 + (36 - bodyFat) * 2, 50, 100), maxScore: 15 });
+  // Training always counted
+  factors.push({ value: clamp(trainingScore, 0, 100), maxScore: 20 });
+
+  // Redistribute: scale so total weights = 100
+  const totalWeight = factors.reduce((s, f) => s + f.maxScore, 0);
+  const score = factors.reduce((s, f) => s + (f.value * (f.maxScore / totalWeight)), 0);
+
+  return { score: Math.round(score), hasEnoughData: true };
 }
 
-// ── Hevy workout analytics (from raw workout array) ──────────────────────
+// ── Hevy workout analytics ───────────────────────────────────────────────
 
 interface RawWorkout {
   id: string; date: string; title: string; duration_min: number;
@@ -83,8 +106,7 @@ function computeHevySummary(workouts: RawWorkout[]) {
 function computeWeeklyVolume(workouts: RawWorkout[]) {
   const weeks: Record<string, number> = {};
   for (const w of workouts) {
-    const d = new Date(w.date);
-    const ws = new Date(d); ws.setDate(d.getDate() - d.getDay());
+    const d = new Date(w.date); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay());
     const key = ws.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     let vol = 0;
     for (const ex of w.exercises) for (const s of ex.sets) { if (s.type !== "warmup") vol += s.weight_kg * s.reps; }
@@ -96,8 +118,7 @@ function computeWeeklyVolume(workouts: RawWorkout[]) {
 function computeFrequency(workouts: RawWorkout[]) {
   const weeks: Record<string, number> = {};
   for (const w of workouts) {
-    const d = new Date(w.date);
-    const ws = new Date(d); ws.setDate(d.getDate() - d.getDay());
+    const d = new Date(w.date); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay());
     const key = ws.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     weeks[key] = (weeks[key] || 0) + 1;
   }
@@ -105,10 +126,8 @@ function computeFrequency(workouts: RawWorkout[]) {
 }
 
 function computeStrength(workouts: RawWorkout[]) {
-  // Find the top exercises by frequency and weight — not a hardcoded list
   const exerciseData: Record<string, { date: string; weight: number }[]> = {};
   const exerciseMaxWeight: Record<string, number> = {};
-
   for (const w of workouts) {
     for (const ex of w.exercises) {
       const top = ex.sets.filter((s) => s.type === "normal").reduce((b, s) => s.weight_kg > b ? s.weight_kg : b, 0);
@@ -119,8 +138,6 @@ function computeStrength(workouts: RawWorkout[]) {
       }
     }
   }
-
-  // Return top 4 exercises by max weight lifted
   return Object.entries(exerciseData)
     .sort((a, b) => (exerciseMaxWeight[b[0]] || 0) - (exerciseMaxWeight[a[0]] || 0))
     .slice(0, 4)
@@ -152,37 +169,26 @@ function computeMuscleLoads(workouts: RawWorkout[]) {
   const allMuscles: MuscleGroup[] = ["chest", "back", "shoulders", "biceps", "triceps", "forearms", "core", "quads", "hamstrings", "glutes", "calves", "traps"];
   const loads: Record<string, { sets: number; volume: number; lastWorked: string }> = {};
   for (const m of allMuscles) loads[m] = { sets: 0, volume: 0, lastWorked: "" };
-
   const recent = workouts.slice(-8);
   for (const w of recent) {
     for (const ex of w.exercises) {
-      // Primary muscle
       const primary = MUSCLE_MAP[ex.muscle_group] || ex.muscle_group || "core";
       const primaryMapped = allMuscles.includes(primary as MuscleGroup) ? primary : "core";
       for (const s of ex.sets) {
-        if (s.type !== "warmup") {
-          loads[primaryMapped].sets++;
-          loads[primaryMapped].volume += s.weight_kg * s.reps;
-        }
+        if (s.type !== "warmup") { loads[primaryMapped].sets++; loads[primaryMapped].volume += s.weight_kg * s.reps; }
       }
       if (!loads[primaryMapped].lastWorked || w.date > loads[primaryMapped].lastWorked) loads[primaryMapped].lastWorked = w.date;
-
-      // Secondary muscles
       const secondaries = ex.secondary_muscles || [];
       for (const sec of secondaries) {
         const secMapped = MUSCLE_MAP[sec] || sec || "core";
         const secFinal = allMuscles.includes(secMapped as MuscleGroup) ? secMapped : "core";
         for (const s of ex.sets) {
-          if (s.type !== "warmup") {
-            loads[secFinal].sets += 0.5; // secondary gets half credit
-            loads[secFinal].volume += (s.weight_kg * s.reps) * 0.4;
-          }
+          if (s.type !== "warmup") { loads[secFinal].sets += 0.5; loads[secFinal].volume += (s.weight_kg * s.reps) * 0.4; }
         }
         if (!loads[secFinal].lastWorked || w.date > loads[secFinal].lastWorked) loads[secFinal].lastWorked = w.date;
       }
     }
   }
-
   return allMuscles.map((m) => {
     const l = loads[m];
     const daysSince = l.lastWorked ? Math.max(0, (Date.now() - new Date(l.lastWorked).getTime()) / 86400000) : 99;
@@ -209,65 +215,53 @@ interface Insight { text: string; type: "positive" | "warning" | "info" }
 
 function computeInsights(days: DayData[], workouts: RawWorkout[]): Insight[] {
   if (days.length === 0 && workouts.length === 0) return [];
-
   const insights: Insight[] = [];
   const latest = days.length ? days[days.length - 1] : null;
 
   if (days.length >= 7) {
     const last7 = days.slice(-7);
     const prev7 = days.slice(-14, -7);
-
-    // HRV trend
     if (prev7.length >= 3) {
-      const avgHrvNow = last7.filter(d => d.hrv).reduce((s, d) => s + (d.hrv ?? 0), 0) / last7.filter(d => d.hrv).length;
-      const avgHrvPrev = prev7.filter(d => d.hrv).reduce((s, d) => s + (d.hrv ?? 0), 0) / Math.max(1, prev7.filter(d => d.hrv).length);
+      const avgHrvNow = last7.filter(d => num(d.hrv)).reduce((s, d) => s + (num(d.hrv) ?? 0), 0) / Math.max(1, last7.filter(d => num(d.hrv)).length);
+      const avgHrvPrev = prev7.filter(d => num(d.hrv)).reduce((s, d) => s + (num(d.hrv) ?? 0), 0) / Math.max(1, prev7.filter(d => num(d.hrv)).length);
       if (avgHrvPrev > 0) {
         const change = Math.round(((avgHrvNow - avgHrvPrev) / avgHrvPrev) * 100);
         if (change > 5) insights.push({ text: `HRV improved ${change}% over the past 2 weeks (${Math.round(avgHrvPrev)}ms → ${Math.round(avgHrvNow)}ms) — cardiovascular fitness is trending up.`, type: "positive" });
         else if (change < -10) insights.push({ text: `HRV declined ${Math.abs(change)}% over the past 2 weeks (${Math.round(avgHrvPrev)}ms → ${Math.round(avgHrvNow)}ms) — consider prioritizing recovery.`, type: "warning" });
       }
     }
-
-    // Sleep & recovery correlation
-    const goodSleep = last7.filter(d => (d.sleepHours ?? 0) >= 7.5);
-    const badSleep = last7.filter(d => (d.sleepHours ?? 0) < 6.5 && d.sleepHours !== null);
+    const goodSleep = last7.filter(d => (num(d.sleepHours) ?? 0) >= 7.5);
+    const badSleep = last7.filter(d => (num(d.sleepHours) ?? 0) < 6.5 && num(d.sleepHours) !== null);
     if (goodSleep.length > 0 && badSleep.length > 0) {
-      const avgRecGood = goodSleep.reduce((s, d) => s + (d.recovery ?? 0), 0) / goodSleep.length;
-      const avgRecBad = badSleep.reduce((s, d) => s + (d.recovery ?? 0), 0) / badSleep.length;
-      if (avgRecGood > avgRecBad + 5) {
-        insights.push({ text: `Recovery averages ${Math.round(avgRecGood)}% after 7.5h+ sleep vs ${Math.round(avgRecBad)}% after <6.5h. Sleep is your biggest recovery lever.`, type: "info" });
-      }
+      const avgRecGood = goodSleep.reduce((s, d) => s + (num(d.recovery) ?? 0), 0) / goodSleep.length;
+      const avgRecBad = badSleep.reduce((s, d) => s + (num(d.recovery) ?? 0), 0) / badSleep.length;
+      if (avgRecGood > avgRecBad + 5) insights.push({ text: `Recovery averages ${Math.round(avgRecGood)}% after 7.5h+ sleep vs ${Math.round(avgRecBad)}% after <6.5h. Sleep is your biggest recovery lever.`, type: "info" });
     }
-
-    // Recovery trend
-    if (latest && latest.recovery !== null) {
-      const avgRec = last7.reduce((s, d) => s + (d.recovery ?? 0), 0) / last7.filter(d => d.recovery).length;
-      if (latest.recovery > avgRec + 10) insights.push({ text: `Today's recovery (${latest.recovery}%) is well above your 7-day average (${Math.round(avgRec)}%) — good day for high intensity.`, type: "positive" });
-      else if (latest.recovery < avgRec - 15) insights.push({ text: `Today's recovery (${latest.recovery}%) is below your 7-day average (${Math.round(avgRec)}%) — consider an active recovery day.`, type: "warning" });
+    if (latest && num(latest.recovery) !== null) {
+      const recVals = last7.map(d => num(d.recovery)).filter((v): v is number => v !== null);
+      const avgRec = recVals.length ? recVals.reduce((a, b) => a + b, 0) / recVals.length : 0;
+      const todayRec = num(latest.recovery)!;
+      if (todayRec > avgRec + 10) insights.push({ text: `Today's recovery (${todayRec}%) is well above your 7-day average (${Math.round(avgRec)}%) — good day for high intensity.`, type: "positive" });
+      else if (todayRec < avgRec - 15) insights.push({ text: `Today's recovery (${todayRec}%) is below your 7-day average (${Math.round(avgRec)}%) — consider an active recovery day.`, type: "warning" });
     }
   }
-
-  // Body composition
   if (days.length >= 14) {
     const first = days[0];
-    if (first.bodyFat !== null && latest && latest.bodyFat !== null) {
-      const bfChange = Math.round((latest.bodyFat - first.bodyFat) * 10) / 10;
-      const mmFirst = first.muscleMass ?? 0;
-      const mmLatest = latest?.muscleMass ?? 0;
-      const mmChange = Math.round((mmLatest - mmFirst) * 10) / 10;
+    const last = days[days.length - 1];
+    const bf0 = num(first.bodyFat), bf1 = num(last.bodyFat), mm0 = num(first.muscleMass), mm1 = num(last.muscleMass);
+    if (bf0 !== null && bf1 !== null) {
+      const bfChange = r1(bf1 - bf0);
+      const mmChange = mm0 !== null && mm1 !== null ? r1(mm1 - mm0) : 0;
       if (bfChange < -0.5 && mmChange > 0) insights.push({ text: `Body fat ${bfChange}% and muscle mass +${mmChange}kg over ${days.length} days — recomposition is working.`, type: "positive" });
       else if (bfChange < -0.5) insights.push({ text: `Body fat decreased ${Math.abs(bfChange)}% over ${days.length} days. Keep it up.`, type: "positive" });
     }
   }
-
-  // Training insights
   if (workouts.length > 0) {
     const freq = computeFrequency(workouts);
     const avgFreq = freq.length ? Math.round((freq.reduce((s, w) => s + w.count, 0) / freq.length) * 10) / 10 : 0;
     if (avgFreq >= 4) insights.push({ text: `Training ${avgFreq}x per week consistently. Solid volume for progression.`, type: "positive" });
     else if (avgFreq > 0 && avgFreq < 3) insights.push({ text: `Averaging ${avgFreq} workouts per week. Consider adding 1-2 sessions for faster progress.`, type: "info" });
   }
-
   return insights.slice(0, 5);
 }
 
@@ -297,7 +291,6 @@ export default function Dashboard() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch settings + health data in parallel
     Promise.all([
       fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
       fetch("/api/health-data").then((r) => r.json()).catch(() => null),
@@ -314,17 +307,17 @@ export default function Dashboard() {
 
   const latest = useMemo(() => days.length ? getLatest(days) : null, [days]);
   const trainingScore = useMemo(() => computeTrainingScore(workouts), [workouts]);
-  const score = useMemo(() => computeHealthScore(days, trainingScore), [days, trainingScore]);
+  const { score, hasEnoughData } = useMemo(() => computeHealthScore(days, trainingScore), [days, trainingScore]);
   const hevySummary = useMemo(() => computeHevySummary(workouts), [workouts]);
   const muscleLoads = useMemo(() => computeMuscleLoads(workouts), [workouts]);
 
   const metrics = latest ? [
-    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: latest.recovery ?? 0, unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
-    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: latest.hrv ?? 0, unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
-    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: latest.sleepHours ?? 0, unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
-    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: latest.strain ?? 0, unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
-    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: latest.weight ?? 0, unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
-    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: latest.bodyFat ?? 0, unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
+    { label: "Recovery", dataKey: "recovery" as keyof Omit<DayData, "date">, value: num(latest.recovery) ?? 0, unit: "%", ...getDelta(days, "recovery"), sparkline: getSparkline(days, "recovery"), color: "#22c55e" },
+    { label: "HRV", dataKey: "hrv" as keyof Omit<DayData, "date">, value: num(latest.hrv) ?? 0, unit: "ms", ...getDelta(days, "hrv"), sparkline: getSparkline(days, "hrv"), color: "#3b82f6" },
+    { label: "Sleep", dataKey: "sleepHours" as keyof Omit<DayData, "date">, value: num(latest.sleepHours) ?? 0, unit: "h", ...getDelta(days, "sleepHours"), sparkline: getSparkline(days, "sleepHours"), color: "#a855f7" },
+    { label: "Strain", dataKey: "strain" as keyof Omit<DayData, "date">, value: num(latest.strain) ?? 0, unit: "", ...getDelta(days, "strain"), sparkline: getSparkline(days, "strain"), color: "#f97316" },
+    { label: "Weight", dataKey: "weight" as keyof Omit<DayData, "date">, value: num(latest.weight) ?? 0, unit: "kg", ...getDelta(days, "weight"), sparkline: getSparkline(days, "weight", 30), color: "#06b6d4" },
+    { label: "Body Fat", dataKey: "bodyFat" as keyof Omit<DayData, "date">, value: num(latest.bodyFat) ?? 0, unit: "%", ...getDelta(days, "bodyFat"), sparkline: getSparkline(days, "bodyFat", 30), color: "#ec4899" },
   ] : [];
 
   if (loading) {
@@ -361,7 +354,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* API Key Banner — only show after loading completes */}
+      {/* API Key Banner */}
       {!loading && hasApiKey === false && (
         <div className="border-b border-amber-500/10 bg-amber-500/[0.06] px-6 py-3">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -379,7 +372,24 @@ export default function Dashboard() {
             <h1 className="text-2xl font-extralight tracking-wide text-t1">{greeting()}</h1>
             <p className="mt-1 text-sm font-light text-t4">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
-          <HealthScore score={score} />
+          {hasEnoughData ? (
+            <HealthScore score={score} />
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <svg width="128" height="128" className="-rotate-90">
+                  <circle cx="64" cy="64" r={54} fill="none" stroke="var(--edge)" strokeWidth="5" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-extralight text-t4">—</span>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <p className="text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">Stark Health Score</p>
+                <p className="mt-1 max-w-[180px] text-[11px] leading-relaxed font-light text-tm">Not enough data yet. Connect more providers to calculate your score.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Section: Today */}
@@ -392,28 +402,14 @@ export default function Dashboard() {
           <>
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
               {metrics.map((m, i) => (
-                <MetricCard
-                  key={m.label}
-                  {...m}
-                  delay={i * 80}
-                  active={selectedMetric === m.label}
-                  onClick={() => setSelectedMetric(selectedMetric === m.label ? null : m.label)}
-                />
+                <MetricCard key={m.label} {...m} delay={i * 80} active={selectedMetric === m.label}
+                  onClick={() => setSelectedMetric(selectedMetric === m.label ? null : m.label)} />
               ))}
             </div>
             {selectedMetric && (() => {
               const m = metrics.find((x) => x.label === selectedMetric);
               if (!m) return null;
-              return (
-                <MetricDetail
-                  label={m.label}
-                  dataKey={m.dataKey}
-                  unit={m.unit}
-                  color={m.color}
-                  days={days as DayData[]}
-                  onClose={() => setSelectedMetric(null)}
-                />
-              );
+              return <MetricDetail label={m.label} dataKey={m.dataKey} unit={m.unit} color={m.color} days={days as DayData[]} onClose={() => setSelectedMetric(null)} />;
             })()}
           </>
         ) : (
@@ -445,12 +441,8 @@ export default function Dashboard() {
             const hasData = realInsights.length > 0;
             return (
               <div className="rounded-2xl border border-edge bg-card p-5">
-                <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">
-                  {hasData ? "Cross-Source Insights" : "Get Started"}
-                </h3>
-                <p className="mb-3 text-[11px] font-light text-tm">
-                  {hasData ? "Generated from your WHOOP, Withings & Hevy data" : "Connect your providers to unlock insights"}
-                </p>
+                <h3 className="mb-1 text-[10px] font-medium tracking-[0.2em] text-t4 uppercase">{hasData ? "Cross-Source Insights" : "Get Started"}</h3>
+                <p className="mb-3 text-[11px] font-light text-tm">{hasData ? "Generated from your WHOOP, Withings & Hevy data" : "Connect your providers to unlock insights"}</p>
                 <div className="space-y-2.5">
                   {displayInsights.map((ins, i) => (
                     <div key={i} className="flex items-start gap-2.5 rounded-xl border border-edge bg-page p-3">
@@ -507,15 +499,9 @@ export default function Dashboard() {
         ) : (
           <div className="rounded-2xl border border-edge bg-card p-8 text-center">
             {providers.hevy ? (
-              <>
-                <p className="text-sm font-light text-t2">Hevy connected</p>
-                <p className="mt-1 text-[11px] text-tm">No workouts recorded yet — log your first workout in Hevy to see data here</p>
-              </>
+              <><p className="text-sm font-light text-t2">Hevy connected</p><p className="mt-1 text-[11px] text-tm">No workouts recorded yet — log your first workout in Hevy to see data here</p></>
             ) : (
-              <>
-                <p className="text-sm font-light text-t3">Connect Hevy in Settings to see your workout data</p>
-                <Link href="/settings" className="mt-3 inline-block rounded-full bg-btn px-5 py-2 text-[11px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h">Go to Settings</Link>
-              </>
+              <><p className="text-sm font-light text-t3">Connect Hevy in Settings to see your workout data</p><Link href="/settings" className="mt-3 inline-block rounded-full bg-btn px-5 py-2 text-[11px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h">Go to Settings</Link></>
             )}
           </div>
         )}
