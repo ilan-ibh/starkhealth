@@ -16,14 +16,14 @@ function getSupabase() {
   );
 }
 
-// Authenticate and return user context — all data accessed via MCP token, not user_id
+// Authenticate by MCP token — returns user context or null
 async function authenticateToken(token: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc("verify_mcp_token", { token });
   if (error || !data || data.length === 0) return null;
   const profile = data[0];
   return {
-    token, // keep token for RPC calls that require it
+    token,
     supabase,
     userId: profile.id as string,
     apiKey: profile.anthropic_api_key as string | null,
@@ -31,7 +31,7 @@ async function authenticateToken(token: string) {
   };
 }
 
-// Build health context from cache using MCP token (not user_id) for RPC
+// Build health context from cache using MCP token for RPC
 async function buildMcpContext(supabase: ReturnType<typeof getSupabase>, mcpToken: string): Promise<string> {
   const { data: cachedDays } = await supabase.rpc("get_health_cache_by_token", { mcp_tok: mcpToken });
   const { data: cachedWorkouts } = await supabase.rpc("get_workout_cache_by_token", { mcp_tok: mcpToken });
@@ -68,10 +68,10 @@ FULL DATA: ${JSON.stringify(days)}`);
   return sections.length > 0 ? sections.join("\n\n") : "No health data cached. Load the dashboard first to sync.";
 }
 
-// Use AsyncLocalStorage for request-scoped auth (no global state)
-import { AsyncLocalStorage } from "node:async_hooks";
-type AuthContext = Awaited<ReturnType<typeof authenticateToken>>;
-const authStorage = new AsyncLocalStorage<AuthContext>();
+// Store the authenticated token per-request. On Vercel serverless, each invocation
+// handles one request so there's no cross-user risk. mcp-handler breaks AsyncLocalStorage
+// context between auth and tool execution, so we use a simple module variable instead.
+let _currentToken: string | null = null;
 
 const mcpHandler = createMcpHandler(
   (server) => {
@@ -83,8 +83,9 @@ const mcpHandler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
-        const auth = authStorage.getStore();
-        if (!auth) return { content: [{ type: "text" as const, text: "Authentication failed. Generate an MCP token in Stark Health Settings." }] };
+        if (!_currentToken) return { content: [{ type: "text" as const, text: "Authentication failed. Generate an MCP token in Stark Health Settings." }] };
+        const auth = await authenticateToken(_currentToken);
+        if (!auth) return { content: [{ type: "text" as const, text: "Invalid MCP token. Regenerate in Stark Health Settings." }] };
 
         const { supabase, token, userId } = auth;
         const { data: tokens } = await supabase.rpc("get_provider_tokens_by_token", { mcp_tok: token });
@@ -119,8 +120,9 @@ const mcpHandler = createMcpHandler(
         inputSchema: { question: z.string().describe("Your health question") },
       },
       async ({ question }) => {
-        const auth = authStorage.getStore();
-        if (!auth) return { content: [{ type: "text" as const, text: "Authentication failed. Generate an MCP token in Stark Health Settings." }] };
+        if (!_currentToken) return { content: [{ type: "text" as const, text: "Authentication failed. Generate an MCP token in Stark Health Settings." }] };
+        const auth = await authenticateToken(_currentToken);
+        if (!auth) return { content: [{ type: "text" as const, text: "Invalid MCP token. Regenerate in Stark Health Settings." }] };
 
         const { supabase, token, apiKey, aiModel } = auth;
         if (!apiKey) return { content: [{ type: "text" as const, text: "No Anthropic API key configured. Add one in Stark Health Settings." }] };
@@ -146,8 +148,7 @@ const authedHandler = withMcpAuth(
     if (!bearerToken) return undefined;
     const auth = await authenticateToken(bearerToken);
     if (!auth) return undefined;
-    // Store auth in AsyncLocalStorage for this request
-    authStorage.enterWith(auth);
+    _currentToken = bearerToken;
     return { token: bearerToken, clientId: auth.userId, scopes: [] };
   },
   { required: false }
