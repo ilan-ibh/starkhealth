@@ -22,8 +22,10 @@ An AI assistant (powered by Claude) acts as your personal longevity and performa
 - **MCP Server** — External AI agents (like Open Claw) can access your health data and AI coach via the Model Context Protocol
 - **Units Preference** — Switch between metric (kg, km) and imperial (lbs, mi) in Settings
 - **Account Management** — Full sign up/in/out flow, account deletion with confirmation
+- **Manual Sync** — Force refresh button pulls latest data from all providers instantly, with auto-refresh every 4 hours
+- **Data Recency Labels** — Each metric shows when it was last updated (today / yesterday / 2d ago) so you always know how fresh the data is
 - **Privacy-First** — Bring your own API keys, self-host your database, own your data. No mock data in production — only real provider data shown
-- **Data Caching** — Health data cached in Supabase with 4-hour TTL for fast loads
+- **Data Caching** — Health data cached in Supabase with 4-hour TTL, manual sync available anytime
 
 ### Screenshots
 
