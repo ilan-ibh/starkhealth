@@ -15,7 +15,8 @@ interface DayRow {
   weight: number | null; bodyFat: number | null; muscleMass: number | null; steps: number | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const forceRefresh = new URL(request.url).searchParams.get("force") === "true";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -40,8 +41,8 @@ export async function GET() {
 
   const hasAnyProvider = providers.whoop || providers.withings || providers.hevy;
 
-  // ── Check cache ────────────────────────────────────────────────────────
-  if (hasAnyProvider) {
+  // ── Check cache (skip if force refresh) ─────────────────────────────────
+  if (hasAnyProvider && !forceRefresh) {
     const { data: cachedDays } = await supabase
       .from("health_cache")
       .select("date, data, synced_at")

@@ -321,23 +321,30 @@ export default function Dashboard() {
   const [providers, setProviders] = useState<Record<string, boolean>>({});
   const [providerErrors, setProviderErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = (force = false) => {
+    if (force) setSyncing(true);
     Promise.all([
       fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/health-data").then((r) => r.json()).catch(() => null),
+      fetch(`/api/health-data${force ? "?force=true" : ""}`).then((r) => r.json()).catch(() => null),
     ]).then(([settings, health]) => {
       setHasApiKey(settings.has_api_key ?? false);
       if (health) {
         setDays(health.days || []);
         setWorkouts(health.workouts || []);
         setProviders(health.providers || {});
-        if (health.errors) setProviderErrors(health.errors);
+        setProviderErrors(health.errors || {});
+        setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       }
       setLoading(false);
+      setSyncing(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const trainingScore = useMemo(() => computeTrainingScore(workouts), [workouts]);
   const { score, hasEnoughData } = useMemo(() => computeHealthScore(days, trainingScore), [days, trainingScore]);
@@ -451,11 +458,30 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Section: Today */}
+        {/* Section: Today + Sync */}
         <div className="flex items-center gap-4">
           <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Today</h2>
           <div className="h-px flex-1 bg-edge" />
+          <div className="flex items-center gap-3">
+            {lastSynced && (
+              <span className="text-[9px] text-tm">Last synced {lastSynced}</span>
+            )}
+            <button
+              onClick={() => loadData(true)}
+              disabled={syncing}
+              className="group flex items-center gap-1.5 rounded-full border border-edge px-3 py-1.5 text-[10px] font-light tracking-wider text-t4 transition-all hover:border-edge-h hover:text-t2 disabled:opacity-40"
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className={`${syncing ? "animate-spin" : "transition-transform group-hover:rotate-45"}`}>
+                <path d="M14 8A6 6 0 114.8 3.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M5 1v3h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {syncing ? "Syncing..." : "Sync"}
+            </button>
+          </div>
         </div>
+        <p className="text-[9px] font-light text-tm -mt-4">
+          Data auto-refreshes every 4 hours. Sync pulls the latest from WHOOP, Withings &amp; Hevy now.
+        </p>
 
         {metrics.length > 0 ? (
           <>
