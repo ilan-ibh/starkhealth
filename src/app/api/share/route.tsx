@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+// Use Node.js runtime — Edge has issues with some Satori features
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
