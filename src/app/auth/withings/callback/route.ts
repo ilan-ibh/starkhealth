@@ -70,5 +70,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/settings?error=withings_store_failed`);
   }
 
+  // Subscribe to Withings webhooks for real-time data updates
+  const webhookUrl = `${baseUrl}/api/webhooks/withings`;
+  const categories = [1, 4, 16]; // weight, blood pressure, activity
+  for (const appli of categories) {
+    try {
+      await fetch("https://wbsapi.withings.net/notify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+        body: new URLSearchParams({
+          action: "subscribe",
+          callbackurl: webhookUrl,
+          appli: appli.toString(),
+        }),
+      });
+    } catch {
+      // Non-critical — webhook subscription failure shouldn't block OAuth
+    }
+  }
+
   return NextResponse.redirect(`${baseUrl}/settings?connected=withings`);
 }

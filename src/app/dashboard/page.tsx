@@ -13,6 +13,9 @@ import { MuscleMap } from "@/components/MuscleMap";
 import { VolumeChart, FrequencyChart, StrengthChart, PersonalRecords as PRList } from "@/components/WorkoutCharts";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GoalCards } from "@/components/GoalCard";
+import { PeriodComparison } from "@/components/PeriodComparison";
+import { ShareButton } from "@/components/ShareCard";
 
 // ── Utility functions ────────────────────────────────────────────────────
 
@@ -304,6 +307,44 @@ const ONBOARDING_HINTS: Insight[] = [
   { text: "Add your Anthropic API key to unlock the AI health coach.", type: "info" },
 ];
 
+const GOAL_PRESETS = [
+  { metric: "bodyFat", label: "Body Fat Target", direction: "decrease", placeholder: "15" },
+  { metric: "weight", label: "Weight Target", direction: "decrease", placeholder: "75" },
+  { metric: "sleepHours", label: "Avg Sleep Target", direction: "increase", placeholder: "7.5" },
+  { metric: "hrv", label: "HRV Target", direction: "increase", placeholder: "65" },
+  { metric: "recovery", label: "Avg Recovery Target", direction: "increase", placeholder: "75" },
+];
+
+function AddGoalForm({ onAdd, onCancel }: { onAdd: (g: { metric: string; label: string; target_value: number; direction: string; target_date?: string }) => void; onCancel: () => void }) {
+  const [selected, setSelected] = useState(GOAL_PRESETS[0]);
+  const [value, setValue] = useState("");
+  const [date, setDate] = useState("");
+
+  return (
+    <div className="rounded-2xl border border-edge bg-card p-5">
+      <div className="flex flex-wrap gap-2">
+        {GOAL_PRESETS.map((p) => (
+          <button key={p.metric} onClick={() => setSelected(p)}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-light transition-all ${selected.metric === p.metric ? "bg-btn-h text-t1" : "border border-edge text-t4 hover:text-t2"}`}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-3">
+        <input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={selected.placeholder}
+          className="w-24 rounded-xl border border-edge bg-page px-3 py-2 text-sm font-light text-t1 placeholder-tm outline-none focus:border-edge-h" />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+          className="rounded-xl border border-edge bg-page px-3 py-2 text-sm font-light text-t3 outline-none focus:border-edge-h" />
+        <button onClick={() => { if (value) onAdd({ metric: selected.metric, label: selected.label, target_value: parseFloat(value), direction: selected.direction, target_date: date || undefined }); }}
+          disabled={!value} className="rounded-xl bg-btn px-5 py-2 text-[11px] font-light tracking-wider text-t2 transition-all hover:bg-btn-h disabled:opacity-30">
+          Add Goal
+        </button>
+        <button onClick={onCancel} className="text-[11px] text-t4 hover:text-t2">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -316,6 +357,7 @@ function greeting() {
 export default function Dashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [mcpToken, setMcpToken] = useState<string | null>(null);
   const [days, setDays] = useState<DayData[]>([]);
   const [workouts, setWorkouts] = useState<RawWorkout[]>([]);
   const [providers, setProviders] = useState<Record<string, boolean>>({});
@@ -324,14 +366,19 @@ export default function Dashboard() {
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [goals, setGoals] = useState<any[]>([]);
+  const [showAddGoal, setShowAddGoal] = useState(false);
 
   const loadData = (force = false) => {
     if (force) setSyncing(true);
     Promise.all([
       fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
       fetch(`/api/health-data${force ? "?force=true" : ""}`).then((r) => r.json()).catch(() => null),
-    ]).then(([settings, health]) => {
+      fetch("/api/goals").then((r) => r.json()).catch(() => ({ goals: [] })),
+    ]).then(([settings, health, goalsData]) => {
       setHasApiKey(settings.has_api_key ?? false);
+      if (settings.mcp_token) setMcpToken(settings.mcp_token);
       if (health) {
         setDays(health.days || []);
         setWorkouts(health.workouts || []);
@@ -339,9 +386,20 @@ export default function Dashboard() {
         setProviderErrors(health.errors || {});
         setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       }
+      setGoals(goalsData.goals || []);
       setLoading(false);
       setSyncing(false);
     });
+  };
+
+  const addGoal = async (goal: { metric: string; label: string; target_value: number; direction: string; target_date?: string }) => {
+    const res = await fetch("/api/goals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(goal) });
+    if (res.ok) { const data = await res.json(); setGoals((prev) => [...prev, data.goal]); setShowAddGoal(false); }
+  };
+
+  const deleteGoal = async (id: string) => {
+    await fetch("/api/goals", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setGoals((prev) => prev.filter((g) => g.id !== id));
   };
 
   useEffect(() => { loadData(); }, []);
@@ -477,6 +535,7 @@ export default function Dashboard() {
               </svg>
               {syncing ? "Syncing..." : "Sync"}
             </button>
+            <ShareButton mcpToken={mcpToken} />
           </div>
         </div>
         <p className="text-[9px] font-light text-tm -mt-4">
@@ -503,6 +562,39 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Section: Goals */}
+        {(goals.length > 0 || showAddGoal) && (
+          <>
+            <div className="mt-4 flex items-center gap-4">
+              <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Goals</h2>
+              <div className="h-px flex-1 bg-edge" />
+              <button onClick={() => setShowAddGoal(!showAddGoal)} className="text-[10px] font-light tracking-wider text-t4 transition-colors hover:text-t2">
+                {showAddGoal ? "Cancel" : "+ Add"}
+              </button>
+            </div>
+            {showAddGoal && (
+              <AddGoalForm onAdd={addGoal} onCancel={() => setShowAddGoal(false)} />
+            )}
+            <GoalCards
+              goals={goals}
+              currentValues={{
+                recovery: findLatestMetric(days, "recovery")?.value ?? 0,
+                hrv: findLatestMetric(days, "hrv")?.value ?? 0,
+                sleepHours: findLatestMetric(days, "sleepHours")?.value ?? 0,
+                weight: findLatestMetric(days, "weight")?.value ?? 0,
+                bodyFat: findLatestMetric(days, "bodyFat")?.value ?? 0,
+                strain: findLatestMetric(days, "strain")?.value ?? 0,
+              }}
+              onDelete={deleteGoal}
+            />
+          </>
+        )}
+        {goals.length === 0 && !showAddGoal && (
+          <div className="mt-2 flex justify-center">
+            <button onClick={() => setShowAddGoal(true)} className="text-[10px] font-light tracking-wider text-t4 transition-colors hover:text-t2">+ Set a goal</button>
+          </div>
+        )}
+
         {/* Section: Recovery & Sleep */}
         <div className="mt-4 flex items-center gap-4">
           <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Recovery &amp; Sleep</h2>
@@ -512,6 +604,17 @@ export default function Dashboard() {
           <RecoveryChart data={days as DayData[]} />
           <SleepChart data={days as DayData[]} />
         </div>
+
+        {/* Section: Period Comparison */}
+        {days.length >= 7 && (
+          <>
+            <div className="mt-4 flex items-center gap-4">
+              <h2 className="text-[11px] font-light tracking-[0.25em] text-t3 uppercase">Trends</h2>
+              <div className="h-px flex-1 bg-edge" />
+            </div>
+            <PeriodComparison days={days as DayData[]} />
+          </>
+        )}
 
         {/* Section: Body & Insights */}
         <div className="mt-4 flex items-center gap-4">

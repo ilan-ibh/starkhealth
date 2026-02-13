@@ -64,6 +64,19 @@ Total volume: ${Math.round(totalVol)}kg | Last workout: ${last.title || "Workout
 Full data: ${JSON.stringify(workouts)}`);
   }
 
+  // Goals
+  try {
+    const { data: goals } = await supabase.from("goals").select("*").eq("user_id", userId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (goals && goals.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const goalList = goals.map((g: any) => `• ${g.label}: ${g.direction} to ${g.target_value}${g.target_date ? ` by ${g.target_date}` : ""}`).join("\n");
+      sections.push(`USER'S ACTIVE GOALS:\n${goalList}\n\nReference these goals when giving recommendations. Track progress and mention how current metrics relate to their targets.`);
+    }
+  } catch {
+    // Goals table may not exist yet
+  }
+
   if (sections.length === 0) {
     return "No health data is cached yet. The user needs to connect providers in Settings and load the dashboard at least once to sync data.";
   }
