@@ -15,7 +15,6 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GoalCards } from "@/components/GoalCard";
 import { PeriodComparison } from "@/components/PeriodComparison";
-import { ShareButton } from "@/components/ShareCard";
 
 // ── Utility functions ────────────────────────────────────────────────────
 
@@ -357,7 +356,6 @@ function greeting() {
 export default function Dashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
-  const [mcpToken, setMcpToken] = useState<string | null>(null);
   const [days, setDays] = useState<DayData[]>([]);
   const [workouts, setWorkouts] = useState<RawWorkout[]>([]);
   const [providers, setProviders] = useState<Record<string, boolean>>({});
@@ -535,7 +533,6 @@ export default function Dashboard() {
               </svg>
               {syncing ? "Syncing..." : "Sync"}
             </button>
-            <ShareButton mcpToken={mcpToken} />
           </div>
         </div>
         <p className="text-[9px] font-light text-tm -mt-4">
