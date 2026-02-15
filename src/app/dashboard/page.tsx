@@ -376,7 +376,6 @@ export default function Dashboard() {
       fetch("/api/goals").then((r) => r.json()).catch(() => ({ goals: [] })),
     ]).then(([settings, health, goalsData]) => {
       setHasApiKey(settings.has_api_key ?? false);
-      if (settings.mcp_token) setMcpToken(settings.mcp_token);
       if (health) {
         setDays(health.days || []);
         setWorkouts(health.workouts || []);

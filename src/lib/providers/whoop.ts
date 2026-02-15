@@ -7,26 +7,49 @@ async function refreshTokenIfNeeded(
   userId: string,
   token: { access_token: string; refresh_token: string | null; expires_at: string | null }
 ) {
-  // Proactively refresh if token expires within 30 minutes
   const REFRESH_BUFFER_MS = 30 * 60 * 1000;
   if (!token.expires_at || new Date(token.expires_at) > new Date(Date.now() + REFRESH_BUFFER_MS)) {
     return token.access_token;
   }
 
-  if (!token.refresh_token) throw new Error("WHOOP token expired and no refresh token — reconnect in Settings");
+  // Re-read token from DB — another process (cron) may have already refreshed it
+  const { data: freshToken } = await supabase
+    .from("provider_tokens")
+    .select("access_token, refresh_token, expires_at")
+    .eq("user_id", userId)
+    .eq("provider", "whoop")
+    .single();
+
+  if (freshToken?.expires_at && new Date(freshToken.expires_at) > new Date(Date.now() + REFRESH_BUFFER_MS)) {
+    return freshToken.access_token; // Already refreshed by another process
+  }
+
+  const refreshToken = freshToken?.refresh_token || token.refresh_token;
+  if (!refreshToken) throw new Error("WHOOP token expired and no refresh token — reconnect in Settings");
 
   const res = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: token.refresh_token,
+      refresh_token: refreshToken,
       client_id: process.env.WHOOP_CLIENT_ID!,
       client_secret: process.env.WHOOP_CLIENT_SECRET!,
     }),
   });
 
   if (!res.ok) {
+    // Check if someone else refreshed while we were waiting
+    const { data: retryToken } = await supabase
+      .from("provider_tokens")
+      .select("access_token, expires_at")
+      .eq("user_id", userId)
+      .eq("provider", "whoop")
+      .single();
+
+    if (retryToken?.expires_at && new Date(retryToken.expires_at) > new Date()) {
+      return retryToken.access_token;
+    }
     throw new Error("WHOOP token expired — reconnect in Settings");
   }
 

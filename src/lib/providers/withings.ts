@@ -7,13 +7,25 @@ async function refreshTokenIfNeeded(
   userId: string,
   token: { access_token: string; refresh_token: string | null; expires_at: string | null }
 ) {
-  // Proactively refresh if token expires within 30 minutes
   const REFRESH_BUFFER_MS = 30 * 60 * 1000;
   if (!token.expires_at || new Date(token.expires_at) > new Date(Date.now() + REFRESH_BUFFER_MS)) {
     return token.access_token;
   }
 
-  if (!token.refresh_token) throw new Error("Withings token expired and no refresh token — reconnect in Settings");
+  // Re-read token from DB — another process (cron) may have already refreshed it
+  const { data: freshToken } = await supabase
+    .from("provider_tokens")
+    .select("access_token, refresh_token, expires_at")
+    .eq("user_id", userId)
+    .eq("provider", "withings")
+    .single();
+
+  if (freshToken?.expires_at && new Date(freshToken.expires_at) > new Date(Date.now() + REFRESH_BUFFER_MS)) {
+    return freshToken.access_token; // Already refreshed by another process
+  }
+
+  const refreshToken = freshToken?.refresh_token || token.refresh_token;
+  if (!refreshToken) throw new Error("Withings token expired and no refresh token — reconnect in Settings");
 
   const res = await fetch(`${API}/v2/oauth2`, {
     method: "POST",
@@ -23,13 +35,25 @@ async function refreshTokenIfNeeded(
       grant_type: "refresh_token",
       client_id: process.env.WITHINGS_CLIENT_ID!,
       client_secret: process.env.WITHINGS_CLIENT_SECRET!,
-      refresh_token: token.refresh_token,
+      refresh_token: refreshToken,
     }),
   });
 
   const data = await res.json();
 
   if (data.status !== 0 || !data.body?.access_token) {
+    // One more check — maybe it was refreshed while we were waiting
+    const { data: retryToken } = await supabase
+      .from("provider_tokens")
+      .select("access_token, expires_at")
+      .eq("user_id", userId)
+      .eq("provider", "withings")
+      .single();
+
+    if (retryToken?.expires_at && new Date(retryToken.expires_at) > new Date()) {
+      return retryToken.access_token; // Someone else refreshed it
+    }
+
     throw new Error("Withings token refresh failed — reconnect in Settings");
   }
 
